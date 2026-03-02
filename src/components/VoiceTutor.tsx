@@ -16,7 +16,8 @@ import {
   createVoiceTutorSession,
   RealtimeMessage,
   RealtimeEvent,
-  AudioData
+  AudioData,
+  createWritingTutorSession
 } from '../services/realtimeService';
 import { isMicrophonePermissionGranted } from '../services/microphoneService';
 import { AvatarFaceCanvas } from './AvatarFaceCanvas';
@@ -25,11 +26,19 @@ import type { VisemeQueue } from '../services/visemeMapper';
 interface VoiceTutorProps {
   isOpen: boolean;
   onClose: () => void;
-  questionText: string;
-  explanation: string;
-  studentAnswer: string;
-  correctAnswer: string;
   autoStart?: boolean; // Automatically start conversation when modal opens
+  mode?: 'question' | 'writing';
+  // Question mode props
+  questionText?: string;
+  explanation?: string;
+  studentAnswer?: string;
+  correctAnswer?: string;
+  // Writing mode props
+  writingPrompt?: string;
+  originalText?: string;
+  correctedText?: string;
+  feedbackSummary?: string;
+  feedbackErrors?: Array<{ text: string; suggestion: string; explanation: string; }>;
 }
 
 type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -38,11 +47,17 @@ type SpeakingState = 'idle' | 'ai_speaking' | 'user_speaking' | 'processing';
 export const VoiceTutor: React.FC<VoiceTutorProps> = ({
   isOpen,
   onClose,
+  autoStart = false, // Manual start - user clicks button
+  mode = 'question',
   questionText,
   explanation,
   studentAnswer,
   correctAnswer,
-  autoStart = false // Manual start - user clicks button
+  writingPrompt,
+  originalText,
+  correctedText,
+  feedbackSummary,
+  feedbackErrors
 }) => {
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [speakingState, setSpeakingState] = useState<SpeakingState>('idle');
@@ -129,12 +144,24 @@ export const VoiceTutor: React.FC<VoiceTutorProps> = ({
     setMessages([]);
 
     try {
-      const session = createVoiceTutorSession(
-        questionText,
-        explanation,
-        studentAnswer,
-        correctAnswer
-      );
+      let session: RealtimeSession;
+
+      if (mode === 'writing') {
+        session = createWritingTutorSession(
+          writingPrompt,
+          originalText || '',
+          correctedText || '',
+          feedbackSummary || '',
+          feedbackErrors || []
+        );
+      } else {
+        session = createVoiceTutorSession(
+          questionText || '',
+          explanation || '',
+          studentAnswer || '',
+          correctAnswer || ''
+        );
+      }
 
       session.on('all', handleRealtimeEvent);
       sessionRef.current = session;

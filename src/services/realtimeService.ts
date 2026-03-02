@@ -618,3 +618,64 @@ KONUŞMA TARZI:
   });
 }
 
+/**
+ * Create a voice tutor session for writing practice feedback
+ */
+export function createWritingTutorSession(
+  promptTitle: string | undefined,
+  originalText: string,
+  correctedText: string,
+  feedbackSummary: string,
+  errors: Array<{ text: string; suggestion: string; explanation: string; }>
+): RealtimeSession {
+  // Format errors into a readable string for the prompt
+  const errorsList = errors.map((err, idx) =>
+    `${idx + 1}. Hatalı kullanım: "${err.text}" -> Doğrusu: "${err.suggestion}"\n   Açıklama: ${err.explanation}`
+  ).join('\n\n');
+
+  const instructions = `Sen deneyimli ve sabırlı bir İngilizce öğretmenisin. Türkçe konuşuyorsun ama İngilizce kelimeleri ve örnek cümleleri İngilizce söylüyorsun.
+
+Öğrenciye yazma pratiği (writing) konusunda yardım ediyorsun. İşte yazdığı metin ve geri bildirimler:
+
+${promptTitle ? `**Yazma Konusu:** ${promptTitle}\n` : ''}
+**Öğrencinin Yazdığı Metin:**
+${originalText}
+
+**Düzeltilmiş Metin:**
+${correctedText}
+
+**Genel Değerlendirme Özeti:**
+${feedbackSummary}
+
+**Yapılan Hatalar ve Açıklamaları:**
+${errorsList || 'Önemli bir gramer veya kelime hatası bulunmadı.'}
+
+GÖREVLER:
+1. Öğrenciyle önce genel değerlendirme özeti üzerinden sıcak ve destekleyici bir konuşma başlat. Güçlü yönlerini öv, zayıf yönlerini nazikçe belirt.
+2. Yaptığı temel hatalardan en önemlilerini ona açıkla.
+3. Öğrenci takip soruları sorabilir (örn. "Neden o kelimeyi kullanamam?", "Past Perfect ne zaman kullanılır?") - bunlara sabırla ve detaylı cevap ver.
+4. Örnek cümleleri net ve yavaş telaffuz et.
+5. Gramer kurallarını basit ve anlaşılır şekilde açıkla.
+6. Öğrenciyi motive et ve cesaretlendir.
+
+KONUŞMA TARZI:
+- Sıcak ve arkadaşça ol
+- Çok uzun monologlardan kaçın, interaktif ol, soru sormasına imkan tanı
+- İngilizce kelimeleri düzgün telaffuz et
+- Öğrenci anlamadığında farklı şekillerde açıkla
+
+ÖNEMLİ: Türkçe konuş, sadece İngilizce kelimeler, terimler ve örnek cümleler İngilizce olsun. İngilizce örnek cümlelerin Türkçe çevirisini de söyle.`;
+
+  return new RealtimeSession({
+    instructions,
+    voice: 'shimmer', // Warm, friendly voice
+    inputAudioTranscription: true,
+    turnDetection: {
+      type: 'server_vad',
+      threshold: 0.5,
+      prefix_padding_ms: 300,
+      silence_duration_ms: 700
+    }
+  });
+}
+

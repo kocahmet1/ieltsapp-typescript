@@ -25,6 +25,7 @@ import {
   GrammarError,
   GRAMMAR_CATEGORY_LABELS
 } from '../types';
+import { VoiceTutor } from './VoiceTutor';
 
 interface WritingPracticeProps {
   isOpen: boolean;
@@ -55,6 +56,7 @@ export const WritingPractice = ({
   const [selectedSubmission, setSelectedSubmission] = useState<WritingSubmission | null>(null);
   const [showPromptSelector, setShowPromptSelector] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [isVoiceTutorOpen, setIsVoiceTutorOpen] = useState(false);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -64,6 +66,7 @@ export const WritingPractice = ({
       setWritingText('');
       setCurrentFeedback(null);
       setSelectedSubmission(null);
+      setIsVoiceTutorOpen(false);
     }
   }, [isOpen]);
 
@@ -77,7 +80,7 @@ export const WritingPractice = ({
   const wordLimitStatus = useMemo(() => {
     if (!selectedPrompt) return null;
     const { minWords, maxWords } = selectedPrompt;
-    
+
     if (minWords && wordCount < minWords) {
       return { type: 'warning', message: `En az ${minWords} kelime gerekli (${minWords - wordCount} eksik)` };
     }
@@ -93,7 +96,7 @@ export const WritingPractice = ({
   // Handle submit
   const handleSubmit = async () => {
     if (!writingText.trim() || isSubmitting) return;
-    
+
     setIsSubmitting(true);
     try {
       const feedback = await onSubmitWriting(
@@ -101,7 +104,7 @@ export const WritingPractice = ({
         selectedPrompt?.id,
         selectedPrompt?.title || 'Serbest Yazı'
       );
-      
+
       if (feedback) {
         setCurrentFeedback(feedback);
         setViewMode('result');
@@ -169,7 +172,7 @@ export const WritingPractice = ({
 
     // Sort errors by start index
     const sortedErrors = [...errors].sort((a, b) => a.startIndex - b.startIndex);
-    
+
     const elements: React.JSX.Element[] = [];
     let lastIndex = 0;
 
@@ -510,6 +513,14 @@ export const WritingPractice = ({
 
               {/* Actions */}
               <div className="result-actions">
+                <button
+                  className="voice-tutor-btn"
+                  onClick={() => setIsVoiceTutorOpen(true)}
+                  title="Sesli geri bildirim al"
+                >
+                  <Sparkles size={18} />
+                  <span>Sesli Öğretmen</span>
+                </button>
                 <button className="new-writing-btn" onClick={handleNewWriting}>
                   <RotateCcw size={18} />
                   <span>Yeni Yazı Yaz</span>
@@ -582,6 +593,20 @@ export const WritingPractice = ({
           )}
         </div>
       </div>
+
+      {currentFeedback && isVoiceTutorOpen && (
+        <VoiceTutor
+          isOpen={isVoiceTutorOpen}
+          onClose={() => setIsVoiceTutorOpen(false)}
+          mode="writing"
+          writingPrompt={selectedPrompt?.title}
+          originalText={writingText}
+          correctedText={currentFeedback.correctedText}
+          feedbackSummary={currentFeedback.summary}
+          feedbackErrors={currentFeedback.errors}
+          autoStart={true}
+        />
+      )}
     </div>
   );
 };
