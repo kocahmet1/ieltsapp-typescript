@@ -27,6 +27,7 @@ interface VoiceTutorProps {
   isOpen: boolean;
   onClose: () => void;
   autoStart?: boolean; // Automatically start conversation when modal opens
+  inline?: boolean; // Render without overlay wrapper (embedded mode)
   mode?: 'question' | 'writing';
   // Question mode props
   questionText?: string;
@@ -48,6 +49,7 @@ export const VoiceTutor: React.FC<VoiceTutorProps> = ({
   isOpen,
   onClose,
   autoStart = false, // Manual start - user clicks button
+  inline = false,    // Embedded mode - no overlay
   mode = 'question',
   questionText,
   explanation,
@@ -263,6 +265,119 @@ export const VoiceTutor: React.FC<VoiceTutorProps> = ({
   };
 
   if (!isOpen) return null;
+
+  // Inline (embedded) mode - no overlay wrapper
+  if (inline) {
+    return (
+      <div className="voice-tutor-inline-wrapper">
+        {/* Header */}
+        <div className="voice-tutor-header" style={{ borderRadius: 0, background: 'transparent', borderBottom: '1px solid var(--border-primary)' }}>
+          <div className="voice-tutor-title">
+            <Sparkles size={20} className="sparkle-icon" />
+            <h2>Sesli Öğretmen</h2>
+          </div>
+          <button className="close-btn" onClick={handleClose}>
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Main Content */}
+        <div className="voice-tutor-content">
+          <AvatarFaceCanvas
+            connectionState={connectionState}
+            speakingState={speakingState}
+            getAudioData={connectionState === 'connected' ? getAudioData : null}
+            getVisemeQueue={connectionState === 'connected' ? getVisemeQueue : null}
+          />
+
+          <div className="voice-status">
+            <span className={`status-dot ${connectionState}`}></span>
+            <span className="status-text">{getStatusMessage()}</span>
+          </div>
+
+          {error && (
+            <div className="voice-error">
+              <AlertCircle size={18} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {messages.length > 0 && (
+            <div className="voice-transcript">
+              <h3>Konuşma</h3>
+              <div className="transcript-messages">
+                {messages.map((msg, idx) => (
+                  <div key={idx} className={`transcript-message ${msg.role}`}>
+                    <span className="message-role">
+                      {msg.role === 'assistant' ? '🎓 Öğretmen' : '👤 Sen'}
+                    </span>
+                    <p className="message-content">{msg.content}</p>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+            </div>
+          )}
+
+          {connectionState === 'disconnected' && !error && (
+            <div className="voice-instructions">
+              <h3>🎓 Sesli Öğretmen Hazır!</h3>
+              <p className="voice-ready-text">
+                Yazınızı sesli olarak analiz edeceğim.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Controls */}
+        <div className="voice-tutor-controls">
+          {connectionState === 'connected' && (
+            <>
+              <button
+                className={`control-btn mute-btn ${isMuted ? 'muted' : ''}`}
+                onClick={toggleMute}
+                title={isMuted ? 'Mikrofonu Aç' : 'Mikrofonu Kapat'}
+              >
+                {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+              </button>
+              <button
+                className={`control-btn volume-btn ${!aiVolume ? 'muted' : ''}`}
+                onClick={toggleAiVolume}
+                title={aiVolume ? 'Sesi Kapat' : 'Sesi Aç'}
+              >
+                {aiVolume ? <Volume2 size={24} /> : <VolumeX size={24} />}
+              </button>
+            </>
+          )}
+          {connectionState === 'connecting' ? (
+            <button className="control-btn call-btn connecting" disabled>
+              <Loader2 size={24} className="spinner" />
+              <span>Bağlanıyor...</span>
+            </button>
+          ) : connectionState === 'connected' ? (
+            <button className="control-btn call-btn end" onClick={endConversation}>
+              <PhoneOff size={24} />
+              <span>Konuşmayı Bitir</span>
+            </button>
+          ) : connectionState === 'error' ? (
+            <button className="control-btn call-btn start" onClick={startConversation}>
+              <Phone size={24} />
+              <span>Tekrar Dene</span>
+            </button>
+          ) : (
+            <button className="control-btn call-btn start" onClick={startConversation}>
+              <Mic size={24} />
+              <span>Mikrofonu Aç ve Başla</span>
+            </button>
+          )}
+        </div>
+
+        <div className="voice-tutor-tip">
+          💡 "Neden yanlış?" veya "Daha basit açıklar mısın?" gibi sorular sorabilirsiniz.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="voice-tutor-overlay" onClick={handleClose}>
