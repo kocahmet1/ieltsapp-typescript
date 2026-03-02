@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { X, ChevronRight, ChevronLeft, Check, AlertCircle, Lightbulb, Award, RotateCcw } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, Check, AlertCircle, Lightbulb, Award, RotateCcw, Headphones } from 'lucide-react';
 import { GrammarTopic } from '../types/grammarLesson';
 import { grammarLessons } from '../data/grammarLessons';
 import { updateLessonProgress } from '../services/grammarLessonService';
+import { VoiceTutor } from './VoiceTutor';
 
 interface GrammarLessonViewProps {
     topic: GrammarTopic;
@@ -42,6 +43,7 @@ export function GrammarLessonView({ topic, onClose, onComplete }: GrammarLessonV
     const [showFeedback, setShowFeedback] = useState<Map<number, boolean>>(new Map());
     const [showHint, setShowHint] = useState<Map<number, boolean>>(new Map());
     const [activeSection, setActiveSection] = useState(0);
+    const [showVoiceTutor, setShowVoiceTutor] = useState(false);
 
     if (!lesson) {
         return <div>Lesson not found</div>;
@@ -466,6 +468,14 @@ export function GrammarLessonView({ topic, onClose, onComplete }: GrammarLessonV
                                                 <>
                                                     <AlertCircle size={24} />
                                                     <span>Incorrect</span>
+                                                    <button
+                                                        className="voice-tutor-btn"
+                                                        onClick={() => setShowVoiceTutor(true)}
+                                                        title="Sesli açıklama al ve soru sor"
+                                                    >
+                                                        <Headphones size={18} />
+                                                        <span>Sesli Öğretmen</span>
+                                                    </button>
                                                 </>
                                             )}
                                         </div>
@@ -496,6 +506,18 @@ export function GrammarLessonView({ topic, onClose, onComplete }: GrammarLessonV
                                     </div>
                                 )}
                             </div>
+                        )}
+
+                        {/* Voice Tutor Modal */}
+                        {showVoiceTutor && currentExercise && userAnswers.get(currentExercise.id) !== currentExercise.correctAnswer && (
+                            <VoiceTutor
+                                isOpen={showVoiceTutor}
+                                onClose={() => setShowVoiceTutor(false)}
+                                questionText={currentExercise.question}
+                                explanation={currentExercise.explanation}
+                                studentAnswer={userAnswers.get(currentExercise.id) || ''}
+                                correctAnswer={Array.isArray(currentExercise.correctAnswer) ? currentExercise.correctAnswer.join(', ') : currentExercise.correctAnswer}
+                            />
                         )}
 
                         {/* Navigation */}

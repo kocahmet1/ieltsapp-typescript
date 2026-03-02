@@ -1,24 +1,26 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  Mic, 
-  MicOff, 
-  Phone, 
-  PhoneOff, 
-  Volume2, 
+import {
+  Mic,
+  MicOff,
+  Phone,
+  PhoneOff,
+  Volume2,
   VolumeX,
-  MessageCircle,
   Loader2,
   AlertCircle,
   Sparkles,
   X
 } from 'lucide-react';
-import { 
-  RealtimeSession, 
-  createVoiceTutorSession, 
+import {
+  RealtimeSession,
+  createVoiceTutorSession,
   RealtimeMessage,
-  RealtimeEvent 
+  RealtimeEvent,
+  AudioData
 } from '../services/realtimeService';
 import { isMicrophonePermissionGranted } from '../services/microphoneService';
+import { AvatarFaceCanvas } from './AvatarFaceCanvas';
+import type { VisemeQueue } from '../services/visemeMapper';
 
 interface VoiceTutorProps {
   isOpen: boolean;
@@ -48,7 +50,7 @@ export const VoiceTutor: React.FC<VoiceTutorProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [aiVolume, setAiVolume] = useState(true);
-  
+
   const sessionRef = useRef<RealtimeSession | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasAutoStartedRef = useRef(false);
@@ -121,7 +123,7 @@ export const VoiceTutor: React.FC<VoiceTutorProps> = ({
     // Prevent multiple simultaneous starts
     if (isStartingRef.current) return;
     isStartingRef.current = true;
-    
+
     setConnectionState('connecting');
     setError(null);
     setMessages([]);
@@ -141,8 +143,8 @@ export const VoiceTutor: React.FC<VoiceTutorProps> = ({
     } catch (err) {
       console.error('Failed to start conversation:', err);
       setError(
-        err instanceof Error 
-          ? err.message 
+        err instanceof Error
+          ? err.message
           : 'Ses bağlantısı kurulamadı. Mikrofon izinlerini kontrol edin.'
       );
       setConnectionState('error');
@@ -150,7 +152,7 @@ export const VoiceTutor: React.FC<VoiceTutorProps> = ({
       isStartingRef.current = false;
     }
   }, [questionText, explanation, studentAnswer, correctAnswer, handleRealtimeEvent]);
-  
+
   // Auto-start conversation when modal opens (only if permission is already granted)
   useEffect(() => {
     if (isOpen && autoStart && !hasAutoStartedRef.current && connectionState === 'disconnected' && !isStartingRef.current) {
@@ -165,7 +167,7 @@ export const VoiceTutor: React.FC<VoiceTutorProps> = ({
       }
       // If permission not granted, don't auto-start - show the button instead
     }
-    
+
     // Reset auto-start flag when modal closes
     if (!isOpen) {
       hasAutoStartedRef.current = false;
@@ -200,6 +202,16 @@ export const VoiceTutor: React.FC<VoiceTutorProps> = ({
     onClose();
   };
 
+  // Get audio data callback for avatar face canvas
+  const getAudioData = useCallback((): AudioData => {
+    return sessionRef.current?.getAudioData() ?? { level: 0, low: 0, mid: 0, high: 0, isSpeaking: false };
+  }, []);
+
+  // Get viseme queue for phoneme-driven lip sync
+  const getVisemeQueue = useCallback((): VisemeQueue | null => {
+    return sessionRef.current?.getVisemeQueue() ?? null;
+  }, []);
+
   // Get status message based on state
   const getStatusMessage = () => {
     switch (connectionState) {
@@ -223,22 +235,6 @@ export const VoiceTutor: React.FC<VoiceTutorProps> = ({
     }
   };
 
-  // Get animation class based on state
-  const getAnimationClass = () => {
-    if (connectionState !== 'connected') return '';
-    
-    switch (speakingState) {
-      case 'ai_speaking':
-        return 'ai-speaking';
-      case 'user_speaking':
-        return 'user-speaking';
-      case 'processing':
-        return 'processing';
-      default:
-        return 'idle-connected';
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -257,31 +253,17 @@ export const VoiceTutor: React.FC<VoiceTutorProps> = ({
 
         {/* Main Content */}
         <div className="voice-tutor-content">
-          {/* Visual Indicator */}
-          <div className={`voice-indicator ${getAnimationClass()}`}>
-            <div className="voice-ring ring-1"></div>
-            <div className="voice-ring ring-2"></div>
-            <div className="voice-ring ring-3"></div>
-            <div className="voice-center">
-              {connectionState === 'connecting' ? (
-                <Loader2 size={40} className="spinner" />
-              ) : connectionState === 'connected' ? (
-                speakingState === 'ai_speaking' ? (
-                  <Volume2 size={40} />
-                ) : speakingState === 'user_speaking' ? (
-                  <Mic size={40} />
-                ) : (
-                  <MessageCircle size={40} />
-                )
-              ) : (
-                <MicOff size={40} />
-              )}
-            </div>
-          </div>
+          {/* Avatar Face (Canvas) */}
+          <AvatarFaceCanvas
+            connectionState={connectionState}
+            speakingState={speakingState}
+            getAudioData={connectionState === 'connected' ? getAudioData : null}
+            getVisemeQueue={connectionState === 'connected' ? getVisemeQueue : null}
+          />
 
           {/* Status */}
           <div className="voice-status">
-            <span className={`status-dot ${connectionState}`}></span>
+            <span className={`status - dot ${connectionState} `}></span>
             <span className="status-text">{getStatusMessage()}</span>
           </div>
 
@@ -299,9 +281,9 @@ export const VoiceTutor: React.FC<VoiceTutorProps> = ({
               <h3>Konuşma</h3>
               <div className="transcript-messages">
                 {messages.map((msg, idx) => (
-                  <div 
-                    key={idx} 
-                    className={`transcript-message ${msg.role}`}
+                  <div
+                    key={idx}
+                    className={`transcript - message ${msg.role} `}
                   >
                     <span className="message-role">
                       {msg.role === 'assistant' ? '🎓 Öğretmen' : '👤 Sen'}
@@ -334,16 +316,16 @@ export const VoiceTutor: React.FC<VoiceTutorProps> = ({
         <div className="voice-tutor-controls">
           {connectionState === 'connected' && (
             <>
-              <button 
-                className={`control-btn mute-btn ${isMuted ? 'muted' : ''}`}
+              <button
+                className={`control - btn mute - btn ${isMuted ? 'muted' : ''} `}
                 onClick={toggleMute}
                 title={isMuted ? 'Mikrofonu Aç' : 'Mikrofonu Kapat'}
               >
                 {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
               </button>
 
-              <button 
-                className={`control-btn volume-btn ${!aiVolume ? 'muted' : ''}`}
+              <button
+                className={`control - btn volume - btn ${!aiVolume ? 'muted' : ''} `}
                 onClick={toggleAiVolume}
                 title={aiVolume ? 'Sesi Kapat' : 'Sesi Aç'}
               >
@@ -358,7 +340,7 @@ export const VoiceTutor: React.FC<VoiceTutorProps> = ({
               <span>Bağlanıyor...</span>
             </button>
           ) : connectionState === 'connected' ? (
-            <button 
+            <button
               className="control-btn call-btn end"
               onClick={endConversation}
             >
@@ -366,7 +348,7 @@ export const VoiceTutor: React.FC<VoiceTutorProps> = ({
               <span>Konuşmayı Bitir</span>
             </button>
           ) : connectionState === 'error' ? (
-            <button 
+            <button
               className="control-btn call-btn start"
               onClick={startConversation}
             >
@@ -375,7 +357,7 @@ export const VoiceTutor: React.FC<VoiceTutorProps> = ({
             </button>
           ) : (
             // Show start button - user needs to click once to grant microphone permission
-            <button 
+            <button
               className="control-btn call-btn start"
               onClick={startConversation}
             >
