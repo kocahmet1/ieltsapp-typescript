@@ -277,10 +277,11 @@ export const WritingPractice = ({
         );
       }
 
+      const highlightClass = region.error.errorLevel === 'meta' ? 'error-highlight-meta' : 'error-highlight';
       elements.push(
         <span
           key={`error-${idx}`}
-          className="error-highlight"
+          className={highlightClass}
           title={`${region.error.explanation}\nÖnerilen: ${region.error.suggestion}`}
         >
           {text.slice(region.start, region.end)}
@@ -621,8 +622,11 @@ export const WritingPractice = ({
                   <h3>
                     <FileText size={20} />
                     Metin Analizi
-                    {currentFeedback.errors.length > 0 && (
-                      <span className="error-count">{currentFeedback.errors.length} hata bulundu</span>
+                    {currentFeedback.errors.filter(e => e.errorLevel === 'surface').length > 0 && (
+                      <span className="error-count">{currentFeedback.errors.filter(e => e.errorLevel === 'surface').length} hata bulundu</span>
+                    )}
+                    {currentFeedback.errors.filter(e => e.errorLevel === 'meta').length > 0 && (
+                      <span className="meta-error-count">{currentFeedback.errors.filter(e => e.errorLevel === 'meta').length} stil hatası</span>
                     )}
                   </h3>
                   <div className="text-box original">
@@ -630,10 +634,10 @@ export const WritingPractice = ({
                   </div>
                 </div>
 
-                {currentFeedback.errors.length > 0 && (
+                {currentFeedback.errors.filter(e => e.errorLevel === 'surface').length > 0 && (
                   <div className="error-list">
                     <h3><AlertCircle size={20} />Hatalar ve Düzeltmeler</h3>
-                    {currentFeedback.errors.map((error, idx) => (
+                    {currentFeedback.errors.filter(e => e.errorLevel === 'surface').map((error, idx) => (
                       <div
                         key={idx}
                         className={`error-item ${focusedErrorIndex === idx ? 'active-error' : ''}`}
@@ -648,6 +652,32 @@ export const WritingPractice = ({
                             <span className="error-wrong"><X size={14} />{error.text}</span>
                             <span className="error-arrow">→</span>
                             <span className="error-correct"><CheckCircle size={14} />{error.suggestion}</span>
+                          </div>
+                          <p className="error-explanation">{error.explanation}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {currentFeedback.errors.filter(e => e.errorLevel === 'meta').length > 0 && (
+                  <div className="error-list meta-error-list">
+                    <h3><Sparkles size={20} />Stil ve Yapı Hataları</h3>
+                    {currentFeedback.errors.filter(e => e.errorLevel === 'meta').map((error, idx) => (
+                      <div
+                        key={`meta-${idx}`}
+                        className="error-item meta-error-item"
+                        data-error-index={`meta-${idx}`}
+                      >
+                        <div className="error-header meta-error-header">
+                          <span className="error-num meta-num">#{idx + 1}</span>
+                          <span className="error-category meta-category">{GRAMMAR_CATEGORY_LABELS[error.category]}</span>
+                        </div>
+                        <div className="error-content">
+                          <div className="error-comparison">
+                            <span className="error-wrong meta-wrong"><X size={14} />{error.text}</span>
+                            <span className="error-arrow">→</span>
+                            <span className="error-correct meta-correct"><CheckCircle size={14} />{error.suggestion}</span>
                           </div>
                           <p className="error-explanation">{error.explanation}</p>
                         </div>

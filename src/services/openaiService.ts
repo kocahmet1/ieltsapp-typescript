@@ -311,7 +311,8 @@ Respond ONLY with valid JSON, nothing else.`;
         endIndex: typeof err.endIndex === 'number' ? err.endIndex : 0,
         suggestion: err.suggestion || '',
         explanation: err.explanation || '',
-        category: VALID_CATEGORIES.includes(err.category) ? err.category : 'other'
+        category: VALID_CATEGORIES.includes(err.category) ? err.category : 'other',
+        errorLevel: 'surface' as const
       }));
 
       return {
@@ -349,6 +350,125 @@ function getDefaultFeedback(message: string): WritingFeedback {
     suggestions: [message],
     correctedText: '',
     summary: message
+  };
+}
+
+// ===================================
+// Meta-Level Writing Analysis (Style, Phrasing, Structure)
+// ===================================
+
+export async function getMetaWritingFeedback(
+  text: string
+): Promise<GrammarError[]> {
+  try {
+    const openai = getOpenAIClient();
+
+    const prompt = `You are an expert English writing coach specializing in style, fluency, and naturalness. A student has written the following English text. Your job is to find HIGHER-LEVEL issues that go beyond spelling and basic grammar.
+
+**Student's Text:**
+${text}
+
+## WHAT TO LOOK FOR
+
+Focus ONLY on these meta-level issues (do NOT report spelling or basic grammar errors):
+
+1. **Awkward/Unnatural phrasing** — Sentences that a native speaker would never write that way
+   - Example: "If thinking that way they are kind of right" → "If we think about it that way, they have a point"
+2. **L1 interference** — Sentence structures that come from the student's native language but sound wrong in English
+3. **Register/Tone issues** — Mixing formal and informal language inappropriately (e.g., "kind of" in an essay)
+4. **Missing or weak transitions** — Abrupt topic changes without proper connecting words
+5. **Sentence structure problems** — Run-on sentences, sentence fragments, overly long sentences
+6. **Redundancy and wordiness** — Unnecessarily repetitive or verbose phrases
+7. **Weak word choices** — Using vague or imprecise words where stronger alternatives exist
+8. **Unclear references** — Ambiguous pronouns or unclear antecedents
+9. **Logical flow issues** — Arguments that don't connect well or lack coherence
+10. **Collocation errors** — Word combinations that are grammatically possible but unnatural
+
+## RESPONSE FORMAT
+
+Respond ONLY with valid JSON:
+
+{
+  "metaErrors": [
+    {
+      "text": "<the exact problematic text from the original>",
+      "startIndex": <character start position>,
+      "endIndex": <character end position>,
+      "suggestion": "<improved version>",
+      "explanation": "<Türkçe açıklama - neden doğal değil ve nasıl düzeltilmeli>",
+      "category": "<category from: vocabulary, collocations, word_order, conjunctions, other>"
+    }
+  ]
+}
+
+## RULES:
+1. Do NOT report spelling mistakes or basic grammar errors (those are handled separately)
+2. Focus on sentence-level and paragraph-level issues
+3. The "text" field must contain the EXACT text from the original
+4. Explanations in Turkish, examples in English
+5. Be thorough — check every sentence for naturalness
+
+Respond ONLY with valid JSON.`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert English writing style coach. You focus on higher-level writing quality: naturalness, fluency, style, and coherence. You do NOT report spelling or basic grammar errors. Your explanations are in Turkish. Respond ONLY in JSON format.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 8000,
+      response_format: { type: 'json_object' }
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) return [];
+
+    try {
+      const parsed = JSON.parse(content);
+      return (parsed.metaErrors || []).map((err: GrammarError) => ({
+        text: err.text || '',
+        startIndex: typeof err.startIndex === 'number' ? err.startIndex : 0,
+        endIndex: typeof err.endIndex === 'number' ? err.endIndex : 0,
+        suggestion: err.suggestion || '',
+        explanation: err.explanation || '',
+        category: VALID_CATEGORIES.includes(err.category) ? err.category : 'other',
+        errorLevel: 'meta' as const
+      }));
+    } catch {
+      console.error('Meta feedback: JSON parse error');
+      return [];
+    }
+  } catch (error) {
+    console.error('Error getting meta writing feedback:', error);
+    return []; // Meta errors are non-critical, don't fail the whole analysis
+  }
+}
+
+// ===================================
+// Full Writing Analysis (Surface + Meta)
+// ===================================
+
+export async function getFullWritingFeedback(
+  text: string,
+  promptTitle?: string
+): Promise<WritingFeedback> {
+  // Run both analyses in parallel
+  const [surfaceFeedback, metaErrors] = await Promise.all([
+    getWritingFeedback(text, promptTitle),
+    getMetaWritingFeedback(text)
+  ]);
+
+  // Merge meta errors into the feedback
+  return {
+    ...surfaceFeedback,
+    errors: [...surfaceFeedback.errors, ...metaErrors]
   };
 }
 

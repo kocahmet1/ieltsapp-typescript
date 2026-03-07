@@ -171,6 +171,7 @@ export interface GrammarError {
   suggestion: string;     // Corrected version
   explanation: string;    // Why it's wrong
   category: GrammarCategory;
+  errorLevel: 'surface' | 'meta'; // surface = spelling/grammar (red), meta = style/phrasing (purple)
 }
 
 export interface WritingFeedback {
@@ -198,7 +199,7 @@ export interface WritingSubmission {
 // Reading Comprehension Module Types
 // ===================================
 
-export type ReadingQuestionType = 
+export type ReadingQuestionType =
   | 'main_idea'           // What is the main idea of the passage?
   | 'detail'              // Specific information from the text
   | 'inference'           // What can be inferred from the passage?
@@ -359,7 +360,7 @@ export const IELTS_LISTENING_SECTION_DESCRIPTIONS: Record<IELTSListeningSection,
   section4: 'A monologue on an academic subject (e.g., a university lecture).'
 };
 
-export type ListeningQuestionType = 
+export type ListeningQuestionType =
   | 'multiple_choice'      // Choose from A, B, C, D
   | 'matching'             // Match items from two lists
   | 'completion'           // Fill in the blanks (sentence/note/form completion)

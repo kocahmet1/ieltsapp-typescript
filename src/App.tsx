@@ -14,7 +14,7 @@ import { GrammarLessons } from './components/GrammarLessons';
 import { Exam, UserAnswer, VocabWord, PerformanceStats, MistakeRecord, GrammarCategory, WritingSubmission, WritingPrompt, WritingFeedback, ReadingProgress, ReadingStats, ReadingQuestionType, ListeningProgress, ListeningStats, ListeningQuestionType, IELTSListeningSection } from './types';
 import { getAllExams, getExamById, createExam, parseExamText, deleteExam } from './services/examService';
 import { getAllVocabWords, addVocabWord, removeVocabWord } from './services/vocabService';
-import { getExplanation, getWritingFeedback } from './services/openaiService';
+import { getExplanation, getFullWritingFeedback } from './services/openaiService';
 import { sampleReadingPassages } from './data/readingPassages';
 import { listeningTests } from './data/listeningQuestions';
 import {
@@ -451,7 +451,7 @@ function App() {
     // Get AI feedback if OpenAI is configured
     if (openAIConfigured) {
       try {
-        const feedback = await getWritingFeedback(text, promptTitle);
+        const feedback = await getFullWritingFeedback(text, promptTitle);
 
         // Update submission with feedback
         updateWritingSubmission(submissionId, { feedback });

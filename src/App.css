@@ -10119,6 +10119,78 @@ body {
   margin-top: 4px;
 }
 
+/* ===== Meta Error Styles (Purple) ===== */
+
+/* Purple highlight in text analysis */
+.error-highlight-meta {
+  position: relative;
+  background: rgba(163, 113, 247, 0.2);
+  border-bottom: 2px solid var(--accent-purple, #a371f7);
+  border-radius: 2px;
+  cursor: help;
+  padding: 1px 2px;
+}
+
+.error-highlight-meta .error-tooltip {
+  border-color: var(--accent-purple, #a371f7);
+}
+
+.error-highlight-meta:hover .error-tooltip {
+  display: flex;
+}
+
+/* Meta error count badge */
+.meta-error-count {
+  margin-left: 6px;
+  padding: 2px 8px;
+  background: rgba(163, 113, 247, 0.15);
+  color: var(--accent-purple, #a371f7);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+/* Meta error list header */
+.meta-error-list h3 {
+  color: var(--accent-purple, #a371f7) !important;
+}
+
+/* Meta error card styling */
+.meta-error-item {
+  border-color: rgba(163, 113, 247, 0.3) !important;
+}
+
+.meta-error-item:hover {
+  border-color: var(--accent-purple, #a371f7) !important;
+}
+
+.meta-error-header {
+  background: rgba(163, 113, 247, 0.08) !important;
+  border-bottom-color: rgba(163, 113, 247, 0.2) !important;
+}
+
+.meta-num {
+  color: var(--accent-purple, #a371f7) !important;
+}
+
+.meta-category {
+  background: rgba(163, 113, 247, 0.12) !important;
+  color: var(--accent-purple, #a371f7) !important;
+}
+
+.meta-wrong {
+  background: rgba(163, 113, 247, 0.12) !important;
+  color: var(--accent-purple, #a371f7) !important;
+  text-decoration: none !important;
+  font-style: italic;
+}
+
+.meta-correct {
+  background: rgba(163, 113, 247, 0.08) !important;
+  color: #b392f7 !important;
+  border: 1px solid rgba(163, 113, 247, 0.3);
+}
+
 /* Error list */
 .error-list {
   display: flex;
