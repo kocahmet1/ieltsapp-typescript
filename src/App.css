@@ -10417,9 +10417,17 @@ body {
   display: none;
 }
 
-/* Mobile voice toggle btn — only visible on mobile */
-.mobile-voice-toggle-btn {
-  display: none !important;
+/* Mini avatar button — hidden on desktop, visible on mobile */
+.mini-avatar-btn {
+  display: none;
+}
+
+.mini-avatar-glow {
+  display: none;
+}
+
+.mini-avatar-face {
+  display: none;
 }
 
 @media (max-width: 900px) {
@@ -10481,12 +10489,55 @@ body {
     background: rgba(163, 113, 247, 0.3);
   }
 
-  /* Show the voice toggle button in right panel header on mobile */
-  .mobile-voice-toggle-btn {
-    display: flex !important;
-    background: linear-gradient(135deg, var(--accent-purple), #8b5cf6) !important;
-    border-color: transparent !important;
-    color: white !important;
+  /* Show the mini avatar button in right panel header on mobile */
+  .mini-avatar-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0;
+    margin-left: 4px;
+  }
+
+  .mini-avatar-glow {
+    display: block;
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(163, 113, 247, 0.5) 0%, transparent 65%);
+    animation: mini-avatar-pulse 1.5s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .mini-avatar-face {
+    display: block;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 0 6px rgba(163, 113, 247, 0.5));
+  }
+
+  @keyframes mini-avatar-pulse {
+
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.7;
+    }
+
+    50% {
+      transform: scale(1.2);
+      opacity: 1;
+    }
   }
 
   /* Compact score cards on small screens */

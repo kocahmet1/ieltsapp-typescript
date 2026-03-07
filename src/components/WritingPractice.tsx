@@ -317,6 +317,43 @@ export const WritingPractice = ({
               <PenLine size={24} />
               <h2>Yazma Pratiği</h2>
             </div>
+
+            {/* Mini floating avatar — visible on mobile when voice is active but panel is hidden */}
+            {isVoiceTutorOpen && !mobileShowVoice && (
+              <button
+                className="mini-avatar-btn"
+                onClick={() => setMobileShowVoice(true)}
+                title="Sesli Öğretmeni Aç"
+              >
+                <div className="mini-avatar-glow" />
+                <svg viewBox="0 0 200 200" className="mini-avatar-face">
+                  <defs>
+                    <radialGradient id="miniBg" cx="50%" cy="40%" r="60%">
+                      <stop offset="0%" stopColor="#2a1f3d" />
+                      <stop offset="100%" stopColor="#0d1117" />
+                    </radialGradient>
+                  </defs>
+                  <circle cx="100" cy="100" r="95" fill="url(#miniBg)" stroke="#a371f7" strokeWidth="3" />
+                  {/* Eyes */}
+                  <circle cx="72" cy="85" r="12" fill="#1c2128" stroke="#a371f7" strokeWidth="1.5" />
+                  <circle cx="128" cy="85" r="12" fill="#1c2128" stroke="#a371f7" strokeWidth="1.5" />
+                  <circle cx="72" cy="85" r="6" fill="#a371f7" opacity="0.9">
+                    <animate attributeName="r" values="5;7;5" dur="2s" repeatCount="indefinite" />
+                  </circle>
+                  <circle cx="128" cy="85" r="6" fill="#a371f7" opacity="0.9">
+                    <animate attributeName="r" values="5;7;5" dur="2s" repeatCount="indefinite" />
+                  </circle>
+                  <circle cx="75" cy="82" r="2.5" fill="white" opacity="0.8" />
+                  <circle cx="131" cy="82" r="2.5" fill="white" opacity="0.8" />
+                  {/* Animated mouth */}
+                  <ellipse cx="100" cy="125" rx="18" ry="8" fill="#a371f7" opacity="0.7">
+                    <animate attributeName="ry" values="5;12;8;12;5" dur="0.8s" repeatCount="indefinite" />
+                    <animate attributeName="rx" values="16;20;18;20;16" dur="0.8s" repeatCount="indefinite" />
+                  </ellipse>
+                </svg>
+              </button>
+            )}
+
             <div className="writing-header-actions">
               <button
                 className={`mode-btn ${viewMode === 'write' ? 'active' : ''}`}
@@ -335,16 +372,6 @@ export const WritingPractice = ({
                   <span className="badge">{submissions.length}</span>
                 )}
               </button>
-              {/* Mobile: Sesli Öğretmen toggle — only visible on small screens */}
-              {isVoiceTutorOpen && (
-                <button
-                  className="mode-btn mobile-voice-toggle-btn"
-                  onClick={() => setMobileShowVoice(true)}
-                >
-                  <Sparkles size={18} />
-                  <span>Öğretmen</span>
-                </button>
-              )}
             </div>
             <button className="close-btn" onClick={onClose}>
               <X size={24} />
