@@ -10121,14 +10121,14 @@ body {
 
 /* ===== Meta Error Styles (Purple) ===== */
 
-/* Purple highlight in text analysis */
+/* Purple underline in text analysis (no background to avoid overlap with red highlights) */
 .error-highlight-meta {
   position: relative;
-  background: rgba(163, 113, 247, 0.2);
+  background: none;
   border-bottom: 2px solid var(--accent-purple, #a371f7);
-  border-radius: 2px;
+  border-radius: 0;
   cursor: help;
-  padding: 1px 2px;
+  padding: 0;
 }
 
 .error-highlight-meta .error-tooltip {
