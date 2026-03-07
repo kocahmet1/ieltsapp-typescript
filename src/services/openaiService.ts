@@ -276,10 +276,10 @@ past_perfect, present_perfect, past_simple, present_simple, future_tenses, conti
 Respond ONLY with valid JSON, nothing else.`;
 
     const response = await openai.chat.completions.create({
-      model: 'o3-mini',
+      model: 'gpt-4o',
       messages: [
         {
-          role: 'developer',
+          role: 'system',
           content: 'You are a meticulous English language expert and proofreader. You NEVER skip errors. You analyze text systematically, sentence by sentence, and catch every single mistake — no matter how small. You are thorough, precise, and exhaustive in your analysis. Your explanations are in Turkish, but English terms and example sentences remain in English. Respond ONLY in the requested JSON format.'
         },
         {
@@ -287,15 +287,18 @@ Respond ONLY with valid JSON, nothing else.`;
           content: prompt
         }
       ],
-      max_completion_tokens: 16000,
-      reasoning_effort: 'high',
+      temperature: 0.3,
+      max_tokens: 16000,
       response_format: { type: 'json_object' }
     });
 
     const content = response.choices[0]?.message?.content;
 
     if (!content) {
-      return getDefaultFeedback('Geri bildirim oluşturulamadı.');
+      const refusal = response.choices[0]?.message?.refusal;
+      const finishReason = response.choices[0]?.finish_reason;
+      console.error('Writing feedback: No content in response', { refusal, finishReason, response: response.choices[0] });
+      return getDefaultFeedback(refusal || `Geri bildirim oluşturulamadı. (Sebep: ${finishReason || 'bilinmiyor'})`);
     }
 
     try {
