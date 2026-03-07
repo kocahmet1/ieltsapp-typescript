@@ -10459,6 +10459,50 @@ body {
 /* Ensure error-item has relative positioning for the ::before pseudo-element */
 .error-item {
   position: relative;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+/* Prevent text overflow in error cards */
+.error-item * {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.error-content {
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.error-comparison {
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.error-wrong,
+.error-correct {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.error-explanation {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Also fix highlighted text wrapping */
+.highlighted-text,
+.original-text {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.text-box {
+  overflow: hidden;
+  max-width: 100%;
 }
 
 

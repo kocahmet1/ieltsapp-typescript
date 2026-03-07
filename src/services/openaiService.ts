@@ -37,15 +37,15 @@ export async function getExplanation(
 ): Promise<ExplanationResponse> {
   try {
     const openai = getOpenAIClient();
-    
+
     // Format the question for the prompt
     const optionsText = question.options
       .map(opt => `${opt.letter}) ${opt.text}`)
       .join('\n');
-    
+
     const selectedOptionText = question.options.find(o => o.letter === selectedAnswer)?.text || selectedAnswer;
     const correctOptionText = question.options.find(o => o.letter === correctAnswer)?.text || correctAnswer;
-    
+
     const prompt = `Sen bir İngilizce öğretmenisin. Bir öğrenci aşağıdaki soruyu yanlış cevapladı. 
 
 **Soru (İngilizce):**
@@ -123,7 +123,7 @@ SADECE JSON formatında yanıt ver, başka bir şey yazma.`;
     });
 
     const content = response.choices[0]?.message?.content;
-    
+
     if (!content) {
       return {
         explanation: 'Açıklama oluşturulamadı.',
@@ -133,10 +133,10 @@ SADECE JSON formatında yanıt ver, başka bir şey yazma.`;
 
     try {
       const parsed = JSON.parse(content);
-      const category = VALID_CATEGORIES.includes(parsed.grammarCategory) 
-        ? parsed.grammarCategory 
+      const category = VALID_CATEGORIES.includes(parsed.grammarCategory)
+        ? parsed.grammarCategory
         : 'other';
-      
+
       return {
         explanation: parsed.explanation || 'Açıklama oluşturulamadı.',
         grammarCategory: category
@@ -176,16 +176,16 @@ export function extractVocabularyWords(question: Question): string[] {
     .replace(/_+/g, '') // Remove blanks
     .split(/\s+/)
     .filter(word => word.length > 3 && /^[a-zA-Z]+$/.test(word));
-  
+
   // Extract words from options
   const optionWords = question.options
     .map(opt => opt.text)
     .filter(text => text.length > 2 && /^[a-zA-Z\s]+$/.test(text));
-  
+
   // Combine unique words
   const allWords = [...questionWords, ...optionWords];
   const uniqueWords = [...new Set(allWords.map(w => w.toLowerCase()))];
-  
+
   return uniqueWords.filter(word => {
     // Filter out very common words
     const commonWords = ['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'has', 'have', 'been', 'will', 'more', 'when', 'who', 'been', 'call', 'find', 'each', 'from', 'their', 'there', 'this', 'that', 'with', 'they', 'were', 'said', 'what', 'your'];
@@ -203,27 +203,53 @@ export async function getWritingFeedback(
 ): Promise<WritingFeedback> {
   try {
     const openai = getOpenAIClient();
-    
-    const prompt = `Sen deneyimli bir İngilizce öğretmenisin. Bir öğrenci aşağıdaki İngilizce metni yazdı. Metni analiz et ve geri bildirim ver.
 
-${promptTitle ? `**Yazma Konusu:** ${promptTitle}\n\n` : ''}**Öğrencinin Metni:**
+    const prompt = `You are an expert English language teacher and proofreader. A student has written the following English text. Your job is to perform an EXHAUSTIVE, sentence-by-sentence analysis and find EVERY SINGLE error.
+
+${promptTitle ? `**Writing Topic:** ${promptTitle}\n\n` : ''}**Student's Text:**
 ${text}
 
-Lütfen aşağıdaki JSON formatında yanıt ver:
+## CRITICAL ANALYSIS INSTRUCTIONS
+
+You MUST follow this systematic process:
+
+1. **Read the ENTIRE text first** to understand context and intent.
+2. **Go through the text SENTENCE BY SENTENCE**, word by word.
+3. For EACH sentence, check ALL of the following:
+   - Spelling errors (including commonly confused words like their/there/they're, its/it's, etc.)
+   - Grammar errors (tense consistency, subject-verb agreement, singular/plural, etc.)
+   - Article errors (missing, extra, or wrong articles: a/an/the)
+   - Preposition errors (wrong or missing prepositions: in/on/at/to/for/with/by etc.)
+   - Vocabulary/Word choice errors (wrong word, unnatural phrasing, L1 interference)
+   - Punctuation errors (missing commas, periods, wrong punctuation)
+   - Word order errors
+   - Missing or extra words
+   - Capitalization errors
+   - Run-on sentences or fragments
+   - Passive voice misuse
+   - Collocation errors (unnatural word combinations)
+
+4. **DO NOT SKIP ANY ERROR, no matter how small.** Even minor issues like a missing comma or wrong article MUST be reported.
+5. **DO NOT STOP EARLY.** Analyze the text from the VERY FIRST character to the VERY LAST character.
+6. **If you find 20+ errors, list ALL of them.** There is NO limit on the number of errors you can report.
+
+## RESPONSE FORMAT
+
+Respond ONLY with valid JSON in this exact format:
 
 {
-  "overallScore": <0-100 arası genel puan>,
-  "grammarScore": <0-100 arası dilbilgisi puanı>,
-  "vocabularyScore": <0-100 arası kelime kullanımı puanı>,
-  "structureScore": <0-100 arası cümle yapısı ve organizasyon puanı>,
+  "overallScore": <0-100 overall score>,
+  "grammarScore": <0-100 grammar score>,
+  "vocabularyScore": <0-100 vocabulary/word choice score>,
+  "structureScore": <0-100 sentence structure and organization score>,
   "errors": [
     {
-      "text": "<hatalı metin parçası>",
-      "startIndex": <başlangıç pozisyonu>,
-      "endIndex": <bitiş pozisyonu>,
-      "suggestion": "<düzeltilmiş hali>",
+      "text": "<the exact erroneous text from the original>",
+      "startIndex": <character start position in original text>,
+      "endIndex": <character end position in original text>,
+      "suggestion": "<corrected version>",
       "explanation": "<Türkçe açıklama - neden yanlış ve nasıl düzeltilmeli>",
-      "category": "<grammar kategori - aşağıdaki listeden seç>"
+      "category": "<category from the list below>"
     }
   ],
   "suggestions": [
@@ -231,55 +257,49 @@ Lütfen aşağıdaki JSON formatında yanıt ver:
     "<Türkçe genel öneri 2>",
     "<Türkçe genel öneri 3>"
   ],
-  "correctedText": "<metnin tamamen düzeltilmiş hali>",
+  "correctedText": "<the COMPLETE corrected version of the entire text>",
   "summary": "<Türkçe kısa özet - öğrencinin güçlü ve zayıf yönleri>"
 }
 
-**category** alanı için SADECE aşağıdaki değerlerden BİRİNİ seç:
-- past_perfect, present_perfect, past_simple, present_simple
-- future_tenses, continuous_tenses, prepositions, articles
-- vocabulary, phrasal_verbs, conditionals, modal_verbs
-- gerunds_infinitives, passive_voice, relative_clauses
-- reported_speech, conjunctions, idioms_expressions, collocations
-- comparatives_superlatives, subject_verb_agreement, pronouns
-- word_order, quantifiers, other
+**category** field must be ONE of these values:
+past_perfect, present_perfect, past_simple, present_simple, future_tenses, continuous_tenses, prepositions, articles, vocabulary, phrasal_verbs, conditionals, modal_verbs, gerunds_infinitives, passive_voice, relative_clauses, reported_speech, conjunctions, idioms_expressions, collocations, comparatives_superlatives, subject_verb_agreement, pronouns, word_order, quantifiers, other
 
-**Önemli Kurallar:**
-1. Her hatayı ayrı ayrı listele
-2. startIndex ve endIndex değerleri orijinal metindeki karakter pozisyonları olmalı
-3. Açıklamalar Türkçe olmalı (sadece İngilizce terimler ve örnekler hariç)
-4. En az 3 genel öneri ver
-5. Puanları adil ve yapıcı şekilde ver
-6. Düzeltilmiş metni tam ve eksiksiz yaz
+## IMPORTANT RULES:
+1. List EVERY error individually - do NOT group or merge errors
+2. startIndex and endIndex must be exact character positions in the original text
+3. Explanations must be in Turkish (except English terms and examples)
+4. Provide at least 3 general suggestions
+5. Score fairly and constructively
+6. Write the corrected text COMPLETELY - do not truncate
+7. DOUBLE-CHECK: After listing all errors, re-read the original text one more time to make sure you haven't missed anything
 
-SADECE JSON formatında yanıt ver, başka bir şey yazma.`;
+Respond ONLY with valid JSON, nothing else.`;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'o3-mini',
       messages: [
         {
-          role: 'system',
-          content: 'Sen deneyimli bir İngilizce öğretmenisin. IELTS, TOEFL ve Cambridge sınavlarına hazırlanan öğrencilere yazma pratiği konusunda yardım ediyorsun. Yanıtlarını SADECE istenen JSON formatında ver. Geri bildirimlerini yapıcı ve motive edici şekilde ver.'
+          role: 'developer',
+          content: 'You are a meticulous English language expert and proofreader. You NEVER skip errors. You analyze text systematically, sentence by sentence, and catch every single mistake — no matter how small. You are thorough, precise, and exhaustive in your analysis. Your explanations are in Turkish, but English terms and example sentences remain in English. Respond ONLY in the requested JSON format.'
         },
         {
           role: 'user',
           content: prompt
         }
       ],
-      temperature: 0.7,
-      max_tokens: 3000,
+      max_completion_tokens: 16000,
       response_format: { type: 'json_object' }
     });
 
     const content = response.choices[0]?.message?.content;
-    
+
     if (!content) {
       return getDefaultFeedback('Geri bildirim oluşturulamadı.');
     }
 
     try {
       const parsed = JSON.parse(content);
-      
+
       // Validate and sanitize errors
       const errors: GrammarError[] = (parsed.errors || []).map((err: GrammarError) => ({
         text: err.text || '',
@@ -340,19 +360,19 @@ import { SpeakingFeedback, SpeakingCorrection, SpeakingQuestion } from '../types
 export async function transcribeAudio(audioBlob: Blob): Promise<string> {
   try {
     const openai = getOpenAIClient();
-    
+
     // Convert blob to file
-    const audioFile = new File([audioBlob], 'recording.webm', { 
-      type: audioBlob.type || 'audio/webm' 
+    const audioFile = new File([audioBlob], 'recording.webm', {
+      type: audioBlob.type || 'audio/webm'
     });
-    
+
     const response = await openai.audio.transcriptions.create({
       file: audioFile,
       model: 'whisper-1',
       language: 'en',
       response_format: 'text'
     });
-    
+
     return response;
   } catch (error) {
     console.error('Error transcribing audio:', error);
@@ -366,14 +386,14 @@ export async function transcribeAudio(audioBlob: Blob): Promise<string> {
 export async function generateSpeech(text: string, voice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' = 'nova'): Promise<ArrayBuffer> {
   try {
     const openai = getOpenAIClient();
-    
+
     const response = await openai.audio.speech.create({
       model: 'tts-1',
       voice: voice,
       input: text,
       response_format: 'mp3'
     });
-    
+
     return await response.arrayBuffer();
   } catch (error) {
     console.error('Error generating speech:', error);
@@ -390,12 +410,12 @@ export async function analyzeSpeaking(
 ): Promise<SpeakingFeedback> {
   try {
     const openai = getOpenAIClient();
-    
-    const sectionContext = question.section === 'section1' 
+
+    const sectionContext = question.section === 'section1'
       ? 'Bu IELTS Speaking Bölüm 1 sorusudur. Kısa, doğal ve akıcı cevaplar beklenir (15-30 saniye).'
       : question.section === 'section2'
-      ? 'Bu IELTS Speaking Bölüm 2 (Cue Card) sorusudur. 1-2 dakikalık detaylı bir konuşma beklenir.'
-      : 'Bu IELTS Speaking Bölüm 3 sorusudur. Soyut fikirler ve derinlemesine tartışma beklenir (30-60 saniye).';
+        ? 'Bu IELTS Speaking Bölüm 2 (Cue Card) sorusudur. 1-2 dakikalık detaylı bir konuşma beklenir.'
+        : 'Bu IELTS Speaking Bölüm 3 sorusudur. Soyut fikirler ve derinlemesine tartışma beklenir (30-60 saniye).';
 
     const prompt = `Sen deneyimli bir IELTS Speaking sınav değerlendiricisisin. Bir öğrencinin konuşmasını değerlendir.
 
@@ -467,14 +487,14 @@ SADECE JSON formatında yanıt ver.`;
     });
 
     const content = response.choices[0]?.message?.content;
-    
+
     if (!content) {
       return getDefaultSpeakingFeedback('Değerlendirme oluşturulamadı.', transcript);
     }
 
     try {
       const parsed = JSON.parse(content);
-      
+
       const corrections: SpeakingCorrection[] = (parsed.corrections || []).map((c: SpeakingCorrection) => ({
         original: c.original || '',
         corrected: c.corrected || '',
@@ -528,21 +548,21 @@ function getDefaultSpeakingFeedback(message: string, transcript: string): Speaki
  */
 export function generateVoiceFeedbackText(feedback: SpeakingFeedback): string {
   const bandText = feedback.overallBandScore >= 7 ? 'Excellent performance!' :
-                   feedback.overallBandScore >= 6 ? 'Good job!' :
-                   feedback.overallBandScore >= 5 ? 'Nice effort, keep practicing!' :
-                   'Keep practicing, you can improve!';
+    feedback.overallBandScore >= 6 ? 'Good job!' :
+      feedback.overallBandScore >= 5 ? 'Nice effort, keep practicing!' :
+        'Keep practicing, you can improve!';
 
   let text = `${bandText} Your overall band score is ${feedback.overallBandScore}. `;
   text += `Fluency: ${feedback.fluencyScore}, Vocabulary: ${feedback.vocabularyScore}, `;
   text += `Grammar: ${feedback.grammarScore}, Pronunciation: ${feedback.pronunciationScore}. `;
-  
+
   if (feedback.corrections.length > 0) {
     text += `I noticed ${feedback.corrections.length} area${feedback.corrections.length > 1 ? 's' : ''} for improvement. `;
   }
-  
+
   if (feedback.suggestions.length > 0) {
     text += `Here's a tip: ${feedback.suggestions[0]}`;
   }
-  
+
   return text;
 }
