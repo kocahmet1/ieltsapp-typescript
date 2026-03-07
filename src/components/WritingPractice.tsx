@@ -182,21 +182,97 @@ export const WritingPractice = ({
     return 'var(--accent-red)';
   };
 
-  // Render highlighted text with errors
+  // Render highlighted text with errors - uses text matching for robustness
   const renderHighlightedText = (text: string, errors: GrammarError[]) => {
     if (!errors || errors.length === 0) {
       return <p className="original-text">{text}</p>;
     }
 
-    const sortedErrors = [...errors].sort((a, b) => a.startIndex - b.startIndex);
+    // Build a list of highlight regions by finding each error's text in the original
+    // Uses text matching instead of relying on LLM-provided indices which are often inaccurate
+    const regions: { start: number; end: number; error: GrammarError }[] = [];
+    const usedRanges: Set<string> = new Set();
+
+    for (const error of errors) {
+      if (!error.text || error.text.trim() === '') continue;
+
+      // Try to find the error text in the original, starting near the LLM's suggested position
+      const searchText = error.text;
+      let bestIndex = -1;
+
+      // First try: exact match near the suggested startIndex
+      const suggestedStart = typeof error.startIndex === 'number' ? error.startIndex : 0;
+
+      // Search for all occurrences of the error text
+      const occurrences: number[] = [];
+      let searchFrom = 0;
+      while (searchFrom < text.length) {
+        const idx = text.indexOf(searchText, searchFrom);
+        if (idx === -1) break;
+        occurrences.push(idx);
+        searchFrom = idx + 1;
+      }
+
+      // If no exact match, try case-insensitive
+      if (occurrences.length === 0) {
+        const lowerText = text.toLowerCase();
+        const lowerSearch = searchText.toLowerCase();
+        searchFrom = 0;
+        while (searchFrom < lowerText.length) {
+          const idx = lowerText.indexOf(lowerSearch, searchFrom);
+          if (idx === -1) break;
+          occurrences.push(idx);
+          searchFrom = idx + 1;
+        }
+      }
+
+      if (occurrences.length > 0) {
+        // Pick the occurrence closest to the suggested startIndex that hasn't been used
+        let minDist = Infinity;
+        for (const occ of occurrences) {
+          const rangeKey = `${occ}-${occ + searchText.length}`;
+          if (!usedRanges.has(rangeKey)) {
+            const dist = Math.abs(occ - suggestedStart);
+            if (dist < minDist) {
+              minDist = dist;
+              bestIndex = occ;
+            }
+          }
+        }
+      }
+
+      if (bestIndex !== -1) {
+        const rangeKey = `${bestIndex}-${bestIndex + searchText.length}`;
+        usedRanges.add(rangeKey);
+        regions.push({
+          start: bestIndex,
+          end: bestIndex + searchText.length,
+          error
+        });
+      }
+    }
+
+    // Sort regions by start position
+    regions.sort((a, b) => a.start - b.start);
+
+    // Remove overlapping regions (keep the first one)
+    const filtered: typeof regions = [];
+    for (const region of regions) {
+      const last = filtered[filtered.length - 1];
+      if (!last || region.start >= last.end) {
+        filtered.push(region);
+      }
+    }
+
+    // Build highlighted elements
     const elements: React.JSX.Element[] = [];
     let lastIndex = 0;
 
-    sortedErrors.forEach((error, idx) => {
-      if (error.startIndex > lastIndex) {
+    filtered.forEach((region, idx) => {
+      if (region.start > lastIndex) {
         elements.push(
           <span key={`text-${idx}`}>
-            {text.slice(lastIndex, error.startIndex)}
+            {text.slice(lastIndex, region.start)}
           </span>
         );
       }
@@ -205,17 +281,17 @@ export const WritingPractice = ({
         <span
           key={`error-${idx}`}
           className="error-highlight"
-          title={`${error.explanation}\nÖnerilen: ${error.suggestion}`}
+          title={`${region.error.explanation}\nÖnerilen: ${region.error.suggestion}`}
         >
-          {error.text}
+          {text.slice(region.start, region.end)}
           <span className="error-tooltip">
-            <strong>{GRAMMAR_CATEGORY_LABELS[error.category]}</strong>
-            <span className="tooltip-suggestion">→ {error.suggestion}</span>
+            <strong>{GRAMMAR_CATEGORY_LABELS[region.error.category]}</strong>
+            <span className="tooltip-suggestion">→ {region.error.suggestion}</span>
           </span>
         </span>
       );
 
-      lastIndex = error.endIndex;
+      lastIndex = region.end;
     });
 
     if (lastIndex < text.length) {

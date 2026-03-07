@@ -288,6 +288,7 @@ Respond ONLY with valid JSON, nothing else.`;
         }
       ],
       max_completion_tokens: 16000,
+      reasoning_effort: 'high',
       response_format: { type: 'json_object' }
     });
 
