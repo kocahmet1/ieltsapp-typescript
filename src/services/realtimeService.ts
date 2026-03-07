@@ -35,6 +35,7 @@ export type RealtimeEventType =
   | 'user_speaking'
   | 'user_stopped_speaking'
   | 'transcript'
+  | 'focus_error'
   | 'audio_started'
   | 'audio_stopped'
   | 'error';
@@ -72,6 +73,9 @@ export class RealtimeSession {
   private conversationHistory: RealtimeMessage[] = [];
   private visemeQueue = new VisemeQueue();
   private speakingStopTimer: ReturnType<typeof setInterval> | null = null;
+  // Error focus tracking — detect which error the AI is currently discussing
+  private currentErrorFocus: number = -1;
+  private deltaAccumulator: string = '';
 
   constructor(config: RealtimeSessionConfig) {
     this.config = config;
@@ -298,9 +302,11 @@ export class RealtimeSession {
         const deltaText = (event.delta as string) || '';
         if (deltaText) {
           this.visemeQueue.enqueue(deltaText);
-          // Also ensure speaking state is active — some API versions
-          // don't send response.audio.started, but always send transcript deltas
           this.emit('speaking_started');
+
+          // Accumulate delta text and detect error focus transitions
+          this.deltaAccumulator += deltaText;
+          this.detectErrorFocus();
         }
         break;
       }
@@ -317,6 +323,8 @@ export class RealtimeSession {
           });
           this.emit('transcript', { role: 'assistant', content: transcript });
         }
+        // Reset delta accumulator for next response
+        this.deltaAccumulator = '';
         break;
 
       case 'conversation.item.input_audio_transcription.completed':
@@ -455,6 +463,63 @@ export class RealtimeSession {
       }
     }, 60000);
   }
+
+  /**
+   * Detect which error the AI is currently discussing by scanning
+   * accumulated transcript delta text for numbered error patterns.
+   * Emits 'focus_error' event when a transition to a new error is detected.
+   */
+  private detectErrorFocus(): void {
+    const text = this.deltaAccumulator.toLowerCase();
+
+    // Turkish ordinal patterns mapping to error indices (0-based)
+    const patterns: Array<{ regex: RegExp; index: number }> = [
+      // "birinci hata", "1. hata", "ilk hata", "#1", "hata 1"
+      { regex: /(?:birinci|ilk|1\.?\s*(?:hata|yanlış)|(?:hata|yanlış)\s*(?:#?\s*1|bir\b)|#\s*1)/i, index: 0 },
+      // "ikinci hata", "2. hata", "#2", "hata 2"
+      { regex: /(?:ikinci|2\.?\s*(?:hata|yanlış)|(?:hata|yanlış)\s*(?:#?\s*2|iki\b)|#\s*2)/i, index: 1 },
+      // "üçüncü hata", "3. hata", "#3"
+      { regex: /(?:üçüncü|3\.?\s*(?:hata|yanlış)|(?:hata|yanlış)\s*(?:#?\s*3|üç\b)|#\s*3)/i, index: 2 },
+      // "dördüncü hata", "4. hata", "#4"
+      { regex: /(?:dördüncü|4\.?\s*(?:hata|yanlış)|(?:hata|yanlış)\s*(?:#?\s*4|dört\b)|#\s*4)/i, index: 3 },
+      // "beşinci hata", "5. hata", "#5"
+      { regex: /(?:beşinci|5\.?\s*(?:hata|yanlış)|(?:hata|yanlış)\s*(?:#?\s*5|beş\b)|#\s*5)/i, index: 4 },
+      // "altıncı hata", "6. hata", "#6"
+      { regex: /(?:altıncı|6\.?\s*(?:hata|yanlış)|(?:hata|yanlış)\s*(?:#?\s*6|altı\b)|#\s*6)/i, index: 5 },
+      // "yedinci hata", "7. hata"
+      { regex: /(?:yedinci|7\.?\s*(?:hata|yanlış)|(?:hata|yanlış)\s*(?:#?\s*7|yedi\b)|#\s*7)/i, index: 6 },
+      // "sekizinci hata", "8. hata"
+      { regex: /(?:sekizinci|8\.?\s*(?:hata|yanlış)|(?:hata|yanlış)\s*(?:#?\s*8|sekiz\b)|#\s*8)/i, index: 7 },
+    ];
+
+    // Find the LAST (most recent) error mentioned in the accumulated text
+    let latestIndex = -1;
+    let latestPosition = -1;
+
+    for (const { regex, index } of patterns) {
+      const match = regex.exec(text);
+      if (match && match.index > latestPosition) {
+        latestPosition = match.index;
+        latestIndex = index;
+      }
+      // Also check with lastIndex for multiple occurrences
+      const globalRegex = new RegExp(regex.source, 'gi');
+      let globalMatch;
+      while ((globalMatch = globalRegex.exec(text)) !== null) {
+        if (globalMatch.index > latestPosition) {
+          latestPosition = globalMatch.index;
+          latestIndex = index;
+        }
+      }
+    }
+
+    // Emit focus_error only when transitioning to a different error
+    if (latestIndex >= 0 && latestIndex !== this.currentErrorFocus) {
+      this.currentErrorFocus = latestIndex;
+      this.emit('focus_error', { errorIndex: latestIndex });
+    }
+  }
+
 
   /**
    * Get the conversation history
@@ -652,11 +717,17 @@ ${errorsList || 'Önemli bir gramer veya kelime hatası bulunmadı.'}
 
 GÖREVLER:
 1. Öğrenciyle önce genel değerlendirme özeti üzerinden sıcak ve destekleyici bir konuşma başlat. Güçlü yönlerini öv, zayıf yönlerini nazikçe belirt.
-2. Yaptığı temel hatalardan en önemlilerini ona açıkla.
-3. Öğrenci takip soruları sorabilir (örn. "Neden o kelimeyi kullanamam?", "Past Perfect ne zaman kullanılır?") - bunlara sabırla ve detaylı cevap ver.
+2. Sonra hataları SIRAYLA TEK TEK açıkla. **Her hataya geçerken mutlaka "Birinci hata:", "İkinci hata:", "Üçüncü hata:" gibi açıkça numarasını söyle.** Bu çok önemli çünkü ekranda ilgili hata vurgulanacak.
+3. Öğrenci takip soruları sorabilir - bunlara sabırla ve detaylı cevap ver.
 4. Örnek cümleleri net ve yavaş telaffuz et.
 5. Gramer kurallarını basit ve anlaşılır şekilde açıkla.
 6. Öğrenciyi motive et ve cesaretlendir.
+
+HATA NUMARALAMA KURALI (KRİTİK):
+- Hataları anlatırken HER ZAMAN numarasını söyle: "Birinci hata:", "İkinci hata:" veya "1. hata:", "2. hata:" şeklinde.
+- Bir hatadan diğerine geçerken yeni hatanın numarasını açıkça belirt.
+- İlk hataya başlamadan önce genel özeti bitir, sonra "Şimdi hatalarına bakalım. Birinci hata:" diye başla.
+- Her hata için: önce ne yanlış yazıldığını, sonra doğrusunu, sonra nedenini açıkla.
 
 KONUŞMA TARZI:
 - Sıcak ve arkadaşça ol

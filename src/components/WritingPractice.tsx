@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   X,
   PenLine,
@@ -59,6 +59,18 @@ export const WritingPractice = ({
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [isVoiceTutorOpen, setIsVoiceTutorOpen] = useState(false);
   const [mobileShowVoice, setMobileShowVoice] = useState(false);
+  const [focusedErrorIndex, setFocusedErrorIndex] = useState<number>(-1);
+
+  // Handle focus_error from VoiceTutor — move avatar to the discussed error
+  const handleFocusError = useCallback((errorIndex: number) => {
+    setFocusedErrorIndex(errorIndex);
+
+    // Find the error element and scroll it into view
+    const errorEl = document.querySelector(`[data-error-index="${errorIndex}"]`);
+    if (errorEl) {
+      errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, []);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -253,6 +265,7 @@ export const WritingPractice = ({
                 feedbackErrors={currentFeedback.errors}
                 autoStart={true}
                 inline={true}
+                onFocusError={handleFocusError}
               />
             </div>
           ) : (
@@ -545,7 +558,11 @@ export const WritingPractice = ({
                   <div className="error-list">
                     <h3><AlertCircle size={20} />Hatalar ve Düzeltmeler</h3>
                     {currentFeedback.errors.map((error, idx) => (
-                      <div key={idx} className="error-item">
+                      <div
+                        key={idx}
+                        className={`error-item ${focusedErrorIndex === idx ? 'active-error' : ''}`}
+                        data-error-index={idx}
+                      >
                         <div className="error-header">
                           <span className="error-num">#{idx + 1}</span>
                           <span className="error-category">{GRAMMAR_CATEGORY_LABELS[error.category]}</span>

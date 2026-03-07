@@ -10410,6 +10410,58 @@ body {
   margin: 0;
 }
 
+/* ===== Active Error Tracking — Glow when AI discusses an error ===== */
+
+.error-item {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.error-item.active-error {
+  border-color: var(--accent-purple) !important;
+  box-shadow:
+    0 0 12px rgba(163, 113, 247, 0.4),
+    0 0 24px rgba(163, 113, 247, 0.15),
+    inset 0 0 8px rgba(163, 113, 247, 0.05);
+  transform: scale(1.02);
+  animation: error-focus-pulse 2s ease-in-out infinite;
+}
+
+@keyframes error-focus-pulse {
+
+  0%,
+  100% {
+    box-shadow:
+      0 0 12px rgba(163, 113, 247, 0.4),
+      0 0 24px rgba(163, 113, 247, 0.15),
+      inset 0 0 8px rgba(163, 113, 247, 0.05);
+  }
+
+  50% {
+    box-shadow:
+      0 0 18px rgba(163, 113, 247, 0.6),
+      0 0 36px rgba(163, 113, 247, 0.25),
+      inset 0 0 12px rgba(163, 113, 247, 0.1);
+  }
+}
+
+/* Active error indicator bar on the left */
+.error-item.active-error::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--accent-purple), #8b5cf6);
+  border-radius: 2px 0 0 2px;
+}
+
+/* Ensure error-item has relative positioning for the ::before pseudo-element */
+.error-item {
+  position: relative;
+}
+
+
 /* ===== Responsive: Mobile panel switching ===== */
 
 /* Mobile back button — only visible on mobile */

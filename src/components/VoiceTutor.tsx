@@ -40,6 +40,7 @@ interface VoiceTutorProps {
   correctedText?: string;
   feedbackSummary?: string;
   feedbackErrors?: Array<{ text: string; suggestion: string; explanation: string; }>;
+  onFocusError?: (errorIndex: number) => void;
 }
 
 type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -59,7 +60,8 @@ export const VoiceTutor: React.FC<VoiceTutorProps> = ({
   originalText,
   correctedText,
   feedbackSummary,
-  feedbackErrors
+  feedbackErrors,
+  onFocusError
 }) => {
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [speakingState, setSpeakingState] = useState<SpeakingState>('idle');
@@ -132,8 +134,16 @@ export const VoiceTutor: React.FC<VoiceTutorProps> = ({
         setError('Bağlantı hatası oluştu. Lütfen tekrar deneyin.');
         setConnectionState('error');
         break;
+
+      case 'focus_error': {
+        const focusData = event.data as { errorIndex: number };
+        if (focusData && typeof focusData.errorIndex === 'number' && onFocusError) {
+          onFocusError(focusData.errorIndex);
+        }
+        break;
+      }
     }
-  }, []);
+  }, [onFocusError]);
 
   // Start the voice conversation
   const startConversation = useCallback(async () => {
