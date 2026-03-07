@@ -16,7 +16,8 @@ import {
   Target,
   Sparkles,
   History,
-  RotateCcw
+  RotateCcw,
+  ArrowLeft
 } from 'lucide-react';
 import {
   WritingSubmission,
@@ -57,6 +58,7 @@ export const WritingPractice = ({
   const [showPromptSelector, setShowPromptSelector] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [isVoiceTutorOpen, setIsVoiceTutorOpen] = useState(false);
+  const [mobileShowVoice, setMobileShowVoice] = useState(false);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -67,6 +69,7 @@ export const WritingPractice = ({
       setCurrentFeedback(null);
       setSelectedSubmission(null);
       setIsVoiceTutorOpen(false);
+      setMobileShowVoice(false);
     }
   }, [isOpen]);
 
@@ -219,13 +222,22 @@ export const WritingPractice = ({
       <div className="writing-practice-split" onClick={e => e.stopPropagation()}>
 
         {/* ===== LEFT PANEL — Voice Tutor ===== */}
-        <div className={`writing-left-panel ${isVoiceTutorOpen ? 'voice-active' : ''}`}>
+        <div className={`writing-left-panel ${isVoiceTutorOpen ? 'voice-active' : ''} ${mobileShowVoice ? 'mobile-show' : 'mobile-hide'}`}>
 
           <div className="writing-left-header">
             <div className="writing-left-logo">
               <Sparkles size={20} className="sparkle-icon" />
               <span>Sesli Öğretmen</span>
             </div>
+            {/* Mobile back button */}
+            <button
+              className="mobile-back-btn"
+              onClick={() => setMobileShowVoice(false)}
+              aria-label="Geri dön"
+            >
+              <ArrowLeft size={20} />
+              <span>Geri</span>
+            </button>
           </div>
 
           {isVoiceTutorOpen && currentFeedback ? (
@@ -297,7 +309,7 @@ export const WritingPractice = ({
         </div>
 
         {/* ===== RIGHT PANEL — Writing Content ===== */}
-        <div className="writing-right-panel">
+        <div className={`writing-right-panel ${mobileShowVoice ? 'mobile-hide' : ''}`}>
 
           {/* Header */}
           <div className="writing-header">
@@ -323,6 +335,16 @@ export const WritingPractice = ({
                   <span className="badge">{submissions.length}</span>
                 )}
               </button>
+              {/* Mobile: Sesli Öğretmen toggle — only visible on small screens */}
+              {isVoiceTutorOpen && (
+                <button
+                  className="mode-btn mobile-voice-toggle-btn"
+                  onClick={() => setMobileShowVoice(true)}
+                >
+                  <Sparkles size={18} />
+                  <span>Öğretmen</span>
+                </button>
+              )}
             </div>
             <button className="close-btn" onClick={onClose}>
               <X size={24} />

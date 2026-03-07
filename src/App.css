@@ -10410,19 +10410,88 @@ body {
   margin: 0;
 }
 
-/* ===== Responsive: Collapse left panel on small screens ===== */
+/* ===== Responsive: Mobile panel switching ===== */
+
+/* Mobile back button — only visible on mobile */
+.mobile-back-btn {
+  display: none;
+}
+
+/* Mobile voice toggle btn — only visible on mobile */
+.mobile-voice-toggle-btn {
+  display: none !important;
+}
+
 @media (max-width: 900px) {
 
+  /* Split container is the positioning context */
+  .writing-practice-split {
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Left panel: slides in from left over full screen */
   .writing-left-panel,
   .writing-left-panel.voice-active {
-    width: 0;
-    min-width: 0;
-    overflow: hidden;
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    z-index: 10;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     border-right: none;
   }
 
+  /* Show left panel on mobile when .mobile-show is set */
+  .writing-left-panel.mobile-show {
+    transform: translateX(0);
+  }
+
+  /* Right panel: full width on mobile */
   .writing-right-panel {
     width: 100%;
+    flex: 1;
+  }
+
+  /* Hide right panel when voice panel is overlaying */
+  .writing-right-panel.mobile-hide {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* Show the mobile back button in left panel header */
+  .mobile-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(163, 113, 247, 0.15);
+    border: 1px solid rgba(163, 113, 247, 0.3);
+    border-radius: var(--radius-md);
+    color: var(--accent-purple);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .mobile-back-btn:hover {
+    background: rgba(163, 113, 247, 0.3);
+  }
+
+  /* Show the voice toggle button in right panel header on mobile */
+  .mobile-voice-toggle-btn {
+    display: flex !important;
+    background: linear-gradient(135deg, var(--accent-purple), #8b5cf6) !important;
+    border-color: transparent !important;
+    color: white !important;
+  }
+
+  /* Compact score cards on small screens */
+  .score-cards {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
