@@ -204,7 +204,7 @@ export async function getWritingFeedback(
   try {
     const openai = getOpenAIClient();
 
-    const prompt = `You are an expert English language teacher and proofreader. A student has written the following English text. Your job is to perform an EXHAUSTIVE, sentence-by-sentence analysis and find EVERY SINGLE error.
+    const prompt = `You are an expert English language teacher and proofreader. A student has written the following English text. Your job is to find WORD-LEVEL errors: individual misspelled, misused, missing, or extra words.
 
 ${promptTitle ? `**Writing Topic:** ${promptTitle}\n\n` : ''}**Student's Text:**
 ${text}
@@ -214,24 +214,21 @@ ${text}
 You MUST follow this systematic process:
 
 1. **Read the ENTIRE text first** to understand context and intent.
-2. **Go through the text SENTENCE BY SENTENCE**, word by word.
-3. For EACH sentence, check ALL of the following:
-   - Spelling errors (including commonly confused words like their/there/they're, its/it's, etc.)
-   - Grammar errors (tense consistency, subject-verb agreement, singular/plural, etc.)
-   - Article errors (missing, extra, or wrong articles: a/an/the)
-   - Preposition errors (wrong or missing prepositions: in/on/at/to/for/with/by etc.)
-   - Vocabulary/Word choice errors (wrong word, unnatural phrasing, L1 interference)
-   - Punctuation errors (missing commas, periods, wrong punctuation)
-   - Word order errors
-   - Missing or extra words
+2. **Go through the text WORD BY WORD.**
+3. For EACH word, check ONLY the following:
+   - Spelling errors (typos, commonly confused words like their/there/they're, its/it's)
+   - Wrong verb form (tense errors on individual verbs: "provide" → "provides", "says" → "say")
+   - Subject-verb agreement errors (on individual verbs)
+   - Wrong or missing articles (a/an/the)
+   - Wrong or missing prepositions (in/on/at/to/for/with/by)
+   - Wrong pronoun or wrong word form
    - Capitalization errors
-   - Run-on sentences or fragments
-   - Passive voice misuse
-   - Collocation errors (unnatural word combinations)
+   - Missing or extra individual words
 
-4. **DO NOT SKIP ANY ERROR, no matter how small.** Even minor issues like a missing comma or wrong article MUST be reported.
-5. **DO NOT STOP EARLY.** Analyze the text from the VERY FIRST character to the VERY LAST character.
-6. **If you find 20+ errors, list ALL of them.** There is NO limit on the number of errors you can report.
+4. **EACH ERROR must be 1-3 words maximum.** Do NOT flag entire phrases or sentences — only the specific wrong word(s).
+5. **DO NOT report style issues, awkward phrasing, or sentence restructuring** — those are handled separately.
+6. **DO NOT SKIP ANY word-level error.** Even a single wrong letter matters.
+7. **DO NOT STOP EARLY.** Check from the FIRST word to the LAST word.
 
 ## RESPONSE FORMAT
 
