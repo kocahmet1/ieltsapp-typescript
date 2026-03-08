@@ -1,7 +1,7 @@
-import { 
-  collection, 
-  getDocs, 
-  addDoc, 
+import {
+  collection,
+  getDocs,
+  addDoc,
   deleteDoc,
   doc,
   query,
@@ -9,18 +9,28 @@ import {
   where,
   Timestamp
 } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { db, auth } from '../config/firebase';
 import { VocabWord } from '../types';
 
 const VOCAB_COLLECTION = 'vocabVault';
 
+// Helper to get current user ID
+const getUserId = () => {
+  const userId = auth?.currentUser?.uid;
+  if (!userId) throw new Error("User must be logged in to save data.");
+  return userId;
+};
+
 // Get all vocab words
 export async function getAllVocabWords(): Promise<VocabWord[]> {
   try {
+    const userId = auth?.currentUser?.uid;
+    if (!userId) return [];
+
     const vocabRef = collection(db, VOCAB_COLLECTION);
-    const q = query(vocabRef, orderBy('addedAt', 'desc'));
+    const q = query(vocabRef, where('userId', '==', userId), orderBy('addedAt', 'desc'));
     const snapshot = await getDocs(q);
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data();
       return {
@@ -38,25 +48,30 @@ export async function getAllVocabWords(): Promise<VocabWord[]> {
   }
 }
 
-// Add a word to vocab vault
 export async function addVocabWord(
-  word: string, 
+  word: string,
   questionContext: string,
   examId: string,
   questionId: number
 ): Promise<string | null> {
   try {
-    // Check if word already exists
+    const userId = getUserId();
+    // Check if word already exists for this user
     const vocabRef = collection(db, VOCAB_COLLECTION);
-    const existingQuery = query(vocabRef, where('word', '==', word.toLowerCase()));
+    const existingQuery = query(
+      vocabRef,
+      where('userId', '==', userId),
+      where('word', '==', word.toLowerCase())
+    );
     const existing = await getDocs(existingQuery);
-    
+
     if (!existing.empty) {
       console.log('Word already exists in vault');
       return existing.docs[0].id;
     }
-    
+
     const docRef = await addDoc(vocabRef, {
+      userId,
       word: word.toLowerCase(),
       questionContext,
       examId,
@@ -85,8 +100,15 @@ export async function removeVocabWord(wordId: string): Promise<boolean> {
 // Check if a word is in the vault
 export async function isWordInVault(word: string): Promise<boolean> {
   try {
+    const userId = auth?.currentUser?.uid;
+    if (!userId) return false;
+
     const vocabRef = collection(db, VOCAB_COLLECTION);
-    const q = query(vocabRef, where('word', '==', word.toLowerCase()));
+    const q = query(
+      vocabRef,
+      where('userId', '==', userId),
+      where('word', '==', word.toLowerCase())
+    );
     const snapshot = await getDocs(q);
     return !snapshot.empty;
   } catch (error) {

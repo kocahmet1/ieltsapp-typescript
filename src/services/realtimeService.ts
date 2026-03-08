@@ -1,4 +1,4 @@
-import { VisemeQueue } from './visemeMapper';
+﻿import { VisemeQueue } from './visemeMapper';
 
 /**
  * OpenAI Realtime API Service
@@ -124,11 +124,6 @@ export class RealtimeSession {
    * Connect to the OpenAI Realtime API
    */
   async connect(): Promise<void> {
-    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OpenAI API key not configured');
-    }
-
     try {
       // Try to use existing microphone stream if already granted
       const existingStream = getExistingMicrophoneStream();
@@ -173,7 +168,7 @@ export class RealtimeSession {
             this.analyserNode.smoothingTimeConstant = 0.6;
             this.frequencyData = new Uint8Array(this.analyserNode.frequencyBinCount);
 
-            // Route: WebRTC source → analyser
+            // Route: WebRTC source â†’ analyser
             // Note: We don't connect to audioContext.destination because the <audio> 
             // element is already handling speaker output. We just tap the stream.
             source.connect(this.analyserNode);
@@ -198,21 +193,17 @@ export class RealtimeSession {
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
 
-      // Get ephemeral token from OpenAI
-      const sessionResponse = await fetch('https://api.openai.com/v1/realtime/sessions', {
+      // Get ephemeral token from the app server
+      const sessionResponse = await fetch('/api/openai/realtime/session', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'gpt-4o-realtime-preview-2024-12-17',
           voice: this.config.voice,
           instructions: this.config.instructions,
-          input_audio_transcription: this.config.inputAudioTranscription ? {
-            model: 'whisper-1'
-          } : undefined,
-          turn_detection: this.config.turnDetection || {
+          inputAudioTranscription: this.config.inputAudioTranscription,
+          turnDetection: this.config.turnDetection || {
             type: 'server_vad',
             threshold: 0.5,
             prefix_padding_ms: 300,
@@ -363,7 +354,7 @@ export class RealtimeSession {
 
       case 'response.audio.done':
       case 'response.done':
-        // DON'T immediately stop speaking — the audio plays longer than
+        // DON'T immediately stop speaking â€” the audio plays longer than
         // text generation takes. Let the viseme queue drain and use the
         // synthetic fallback until the audio actually goes silent.
         this.scheduleGracefulSpeakingStop();
@@ -481,7 +472,7 @@ export class RealtimeSession {
 
     let silentFrames = 0;
     const SILENCE_THRESHOLD = 0.015;
-    const FRAMES_TO_CONFIRM = 6; // 6 checks × 500ms = 3.0s of silence
+    const FRAMES_TO_CONFIRM = 6; // 6 checks Ã— 500ms = 3.0s of silence
 
     this.speakingStopTimer = setInterval(() => {
       const audio = this.getAudioData();
@@ -489,7 +480,7 @@ export class RealtimeSession {
       if (audio.level < SILENCE_THRESHOLD) {
         silentFrames++;
         if (silentFrames >= FRAMES_TO_CONFIRM) {
-          // Audio has been silent long enough — truly done speaking
+          // Audio has been silent long enough â€” truly done speaking
           this.visemeQueue.clear();
           this.emit('speaking_stopped');
           if (this.speakingStopTimer) {
@@ -548,10 +539,10 @@ export class RealtimeSession {
     this.analyserNode.getByteFrequencyData(this.frequencyData);
 
     const len = this.frequencyData.length;
-    // With fftSize=256 and ~48kHz sample rate, each bin ≈ 187Hz
-    // Low: bins 0-3 (~0-750Hz) — vowel fundamentals, "aah", "oh"
-    // Mid: bins 4-10 (~750-2000Hz) — consonants, voice formants
-    // High: bins 11-20 (~2000-3750Hz) — sibilants, "s", "sh", "f"
+    // With fftSize=256 and ~48kHz sample rate, each bin â‰ˆ 187Hz
+    // Low: bins 0-3 (~0-750Hz) â€” vowel fundamentals, "aah", "oh"
+    // Mid: bins 4-10 (~750-2000Hz) â€” consonants, voice formants
+    // High: bins 11-20 (~2000-3750Hz) â€” sibilants, "s", "sh", "f"
 
     let lowSum = 0, midSum = 0, highSum = 0;
     const lowEnd = Math.min(4, len);
@@ -638,31 +629,31 @@ export function createVoiceTutorSession(
   studentAnswer: string,
   correctAnswer: string
 ): RealtimeSession {
-  const instructions = `Sen deneyimli ve sabırlı bir İngilizce öğretmenisin. Türkçe konuşuyorsun ama İngilizce kelimeleri ve örnek cümleleri İngilizce söylüyorsun.
+  const instructions = `Sen deneyimli ve sabÄ±rlÄ± bir Ä°ngilizce Ã¶ÄŸretmenisin. TÃ¼rkÃ§e konuÅŸuyorsun ama Ä°ngilizce kelimeleri ve Ã¶rnek cÃ¼mleleri Ä°ngilizce sÃ¶ylÃ¼yorsun.
 
-Öğrenciye bir soru hakkında yardım ediyorsun. İşte bağlam:
+Ã–ÄŸrenciye bir soru hakkÄ±nda yardÄ±m ediyorsun. Ä°ÅŸte baÄŸlam:
 
 **Soru:** ${questionContext}
-**Öğrencinin Cevabı:** ${studentAnswer}
-**Doğru Cevap:** ${correctAnswer}
+**Ã–ÄŸrencinin CevabÄ±:** ${studentAnswer}
+**DoÄŸru Cevap:** ${correctAnswer}
 
-**Hazırlanan Açıklama:**
+**HazÄ±rlanan AÃ§Ä±klama:**
 ${explanation}
 
-GÖREVLER:
-1. Önce yukarıdaki açıklamayı sıcak ve destekleyici bir şekilde öğrenciye anlat.
-2. Öğrenci takip soruları sorabilir - bunlara sabırla ve detaylı cevap ver.
-3. Örnek cümleleri net ve yavaş telaffuz et.
-4. Gramer kurallarını basit ve anlaşılır şekilde açıkla.
-5. Öğrenciyi motive et ve cesaretlendir.
+GÃ–REVLER:
+1. Ã–nce yukarÄ±daki aÃ§Ä±klamayÄ± sÄ±cak ve destekleyici bir ÅŸekilde Ã¶ÄŸrenciye anlat.
+2. Ã–ÄŸrenci takip sorularÄ± sorabilir - bunlara sabÄ±rla ve detaylÄ± cevap ver.
+3. Ã–rnek cÃ¼mleleri net ve yavaÅŸ telaffuz et.
+4. Gramer kurallarÄ±nÄ± basit ve anlaÅŸÄ±lÄ±r ÅŸekilde aÃ§Ä±kla.
+5. Ã–ÄŸrenciyi motive et ve cesaretlendir.
 
-KONUŞMA TARZI:
-- Sıcak ve arkadaşça ol
-- Çok uzun monologlardan kaçın, interaktif ol
-- İngilizce kelimeleri düzgün telaffuz et
-- Öğrenci anlamadığında farklı şekillerde açıkla
+KONUÅMA TARZI:
+- SÄ±cak ve arkadaÅŸÃ§a ol
+- Ã‡ok uzun monologlardan kaÃ§Ä±n, interaktif ol
+- Ä°ngilizce kelimeleri dÃ¼zgÃ¼n telaffuz et
+- Ã–ÄŸrenci anlamadÄ±ÄŸÄ±nda farklÄ± ÅŸekillerde aÃ§Ä±kla
 
-ÖNEMLİ: Türkçe konuş, sadece İngilizce kelimeler, terimler ve örnek cümleler İngilizce olsun. İngilizce örnek cümlelerin Türkçe çevirisini de söyle.`;
+Ã–NEMLÄ°: TÃ¼rkÃ§e konuÅŸ, sadece Ä°ngilizce kelimeler, terimler ve Ã¶rnek cÃ¼mleler Ä°ngilizce olsun. Ä°ngilizce Ã¶rnek cÃ¼mlelerin TÃ¼rkÃ§e Ã§evirisini de sÃ¶yle.`;
 
   return new RealtimeSession({
     instructions,
@@ -689,47 +680,47 @@ export function createWritingTutorSession(
 ): RealtimeSession {
   // Format errors into a readable string for the prompt
   const errorsList = errors.map((err, idx) =>
-    `${idx + 1}. Hatalı kullanım: "${err.text}" -> Doğrusu: "${err.suggestion}"\n   Açıklama: ${err.explanation}`
+    `${idx + 1}. HatalÄ± kullanÄ±m: "${err.text}" -> DoÄŸrusu: "${err.suggestion}"\n   AÃ§Ä±klama: ${err.explanation}`
   ).join('\n\n');
 
-  const instructions = `Sen deneyimli ve sabırlı bir İngilizce öğretmenisin. Türkçe konuşuyorsun ama İngilizce kelimeleri ve örnek cümleleri İngilizce söylüyorsun.
+  const instructions = `Sen deneyimli ve sabÄ±rlÄ± bir Ä°ngilizce Ã¶ÄŸretmenisin. TÃ¼rkÃ§e konuÅŸuyorsun ama Ä°ngilizce kelimeleri ve Ã¶rnek cÃ¼mleleri Ä°ngilizce sÃ¶ylÃ¼yorsun.
 
-Öğrenciye yazma pratiği (writing) konusunda yardım ediyorsun. İşte yazdığı metin ve geri bildirimler:
+Ã–ÄŸrenciye yazma pratiÄŸi (writing) konusunda yardÄ±m ediyorsun. Ä°ÅŸte yazdÄ±ÄŸÄ± metin ve geri bildirimler:
 
 ${promptTitle ? `**Yazma Konusu:** ${promptTitle}\n` : ''}
-**Öğrencinin Yazdığı Metin:**
+**Ã–ÄŸrencinin YazdÄ±ÄŸÄ± Metin:**
 ${originalText}
 
-**Düzeltilmiş Metin:**
+**DÃ¼zeltilmiÅŸ Metin:**
 ${correctedText}
 
-**Genel Değerlendirme Özeti:**
+**Genel DeÄŸerlendirme Ã–zeti:**
 ${feedbackSummary}
 
-**Yapılan Hatalar ve Açıklamaları:**
-${errorsList || 'Önemli bir gramer veya kelime hatası bulunmadı.'}
+**YapÄ±lan Hatalar ve AÃ§Ä±klamalarÄ±:**
+${errorsList || 'Ã–nemli bir gramer veya kelime hatasÄ± bulunmadÄ±.'}
 
-GÖREVLER:
-1. Öğrenciyle önce genel değerlendirme özeti üzerinden sıcak ve destekleyici bir konuşma başlat. Güçlü yönlerini öv, zayıf yönlerini nazikçe belirt.
-2. Sonra hataları SIRAYLA TEK TEK açıkla. **Her hataya geçmeden ÖNCE, highlight_error fonksiyonunu çağır.** Örneğin 1. hatayı anlatmaya başlamadan önce highlight_error(1) çağır, 2. hataya geçmeden önce highlight_error(2) çağır. Bu fonksiyon ekranda ilgili hatayı vurgular.
-3. Öğrenci takip soruları sorabilir - bunlara sabırla ve detaylı cevap ver.
-4. Örnek cümleleri net ve yavaş telaffuz et.
-5. Gramer kurallarını basit ve anlaşılır şekilde açıkla.
-6. Öğrenciyi motive et ve cesaretlendir.
+GÃ–REVLER:
+1. Ã–ÄŸrenciyle Ã¶nce genel deÄŸerlendirme Ã¶zeti Ã¼zerinden sÄ±cak ve destekleyici bir konuÅŸma baÅŸlat. GÃ¼Ã§lÃ¼ yÃ¶nlerini Ã¶v, zayÄ±f yÃ¶nlerini nazikÃ§e belirt.
+2. Sonra hatalarÄ± SIRAYLA TEK TEK aÃ§Ä±kla. **Her hataya geÃ§meden Ã–NCE, highlight_error fonksiyonunu Ã§aÄŸÄ±r.** Ã–rneÄŸin 1. hatayÄ± anlatmaya baÅŸlamadan Ã¶nce highlight_error(1) Ã§aÄŸÄ±r, 2. hataya geÃ§meden Ã¶nce highlight_error(2) Ã§aÄŸÄ±r. Bu fonksiyon ekranda ilgili hatayÄ± vurgular.
+3. Ã–ÄŸrenci takip sorularÄ± sorabilir - bunlara sabÄ±rla ve detaylÄ± cevap ver.
+4. Ã–rnek cÃ¼mleleri net ve yavaÅŸ telaffuz et.
+5. Gramer kurallarÄ±nÄ± basit ve anlaÅŸÄ±lÄ±r ÅŸekilde aÃ§Ä±kla.
+6. Ã–ÄŸrenciyi motive et ve cesaretlendir.
 
-FONKSİYON KULLANIMI (KRİTİK):
-- Her hatayı anlatmaya başlamadan HEMEN ÖNCE highlight_error fonksiyonunu çağır.
-- error_number parametresi 1'den başlar (1. hata için 1, 2. hata için 2, vb.)
-- Genel özeti bitirdikten sonra ilk hataya geçmeden önce highlight_error(1) çağır.
-- Bu fonksiyonu çağırmayı ASLA UNUTMA, her hata geçişinde çağır.
+FONKSÄ°YON KULLANIMI (KRÄ°TÄ°K):
+- Her hatayÄ± anlatmaya baÅŸlamadan HEMEN Ã–NCE highlight_error fonksiyonunu Ã§aÄŸÄ±r.
+- error_number parametresi 1'den baÅŸlar (1. hata iÃ§in 1, 2. hata iÃ§in 2, vb.)
+- Genel Ã¶zeti bitirdikten sonra ilk hataya geÃ§meden Ã¶nce highlight_error(1) Ã§aÄŸÄ±r.
+- Bu fonksiyonu Ã§aÄŸÄ±rmayÄ± ASLA UNUTMA, her hata geÃ§iÅŸinde Ã§aÄŸÄ±r.
 
-KONUŞMA TARZI:
-- Sıcak ve arkadaşça ol
-- Çok uzun monologlardan kaçın, interaktif ol, soru sormasına imkan tanı
-- İngilizce kelimeleri düzgün telaffuz et
-- Öğrenci anlamadığında farklı şekillerde açıkla
+KONUÅMA TARZI:
+- SÄ±cak ve arkadaÅŸÃ§a ol
+- Ã‡ok uzun monologlardan kaÃ§Ä±n, interaktif ol, soru sormasÄ±na imkan tanÄ±
+- Ä°ngilizce kelimeleri dÃ¼zgÃ¼n telaffuz et
+- Ã–ÄŸrenci anlamadÄ±ÄŸÄ±nda farklÄ± ÅŸekillerde aÃ§Ä±kla
 
-ÖNEMLİ: Türkçe konuş, sadece İngilizce kelimeler, terimler ve örnek cümleler İngilizce olsun. İngilizce örnek cümlelerin Türkçe çevirisini de söyle.`;
+Ã–NEMLÄ°: TÃ¼rkÃ§e konuÅŸ, sadece Ä°ngilizce kelimeler, terimler ve Ã¶rnek cÃ¼mleler Ä°ngilizce olsun. Ä°ngilizce Ã¶rnek cÃ¼mlelerin TÃ¼rkÃ§e Ã§evirisini de sÃ¶yle.`;
 
   return new RealtimeSession({
     instructions,
@@ -745,13 +736,13 @@ KONUŞMA TARZI:
       {
         type: 'function',
         name: 'highlight_error',
-        description: 'Ekranda bir hata kartını vurgular. Her hatayı anlatmaya başlamadan hemen önce bu fonksiyonu çağır.',
+        description: 'Ekranda bir hata kartÄ±nÄ± vurgular. Her hatayÄ± anlatmaya baÅŸlamadan hemen Ã¶nce bu fonksiyonu Ã§aÄŸÄ±r.',
         parameters: {
           type: 'object',
           properties: {
             error_number: {
               type: 'number',
-              description: `Vurgulanacak hatanın numarası (1-${errors.length} arası)`
+              description: `Vurgulanacak hatanÄ±n numarasÄ± (1-${errors.length} arasÄ±)`
             }
           },
           required: ['error_number']
@@ -760,4 +751,5 @@ KONUŞMA TARZI:
     ] : undefined
   });
 }
+
 

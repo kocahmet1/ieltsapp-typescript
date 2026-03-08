@@ -1,0 +1,22 @@
+﻿src/App.tsx(38,3): error TS6133: 'getMistakesByCategory' is declared but its value is never read.
+src/App.tsx(104,66): error TS2345: Argument of type 'Promise<ReadingStats>' is not assignable to parameter of type 'ReadingStats | (() => ReadingStats)'.
+src/App.tsx(108,72): error TS2345: Argument of type 'Promise<ListeningStats>' is not assignable to parameter of type 'ListeningStats | (() => ListeningStats)'.
+src/App.tsx(138,7): error TS1308: 'await' expressions are only allowed within async functions and at the top levels of modules.
+src/App.tsx(139,7): error TS1308: 'await' expressions are only allowed within async functions and at the top levels of modules.
+src/App.tsx(140,7): error TS1308: 'await' expressions are only allowed within async functions and at the top levels of modules.
+src/App.tsx(450,10): error TS6133: 'mistakesByCategory' is declared but its value is never read.
+src/App.tsx(450,30): error TS6133: 'setMistakesByCategory' is declared but its value is never read.
+src/App.tsx(476,54): error TS2345: Argument of type '{ promptId: string | undefined; promptTitle: string | undefined; originalText: string; wordCount: number; }' is not assignable to parameter of type 'Omit<WritingSubmission, "id">'.
+  Property 'submittedAt' is missing in type '{ promptId: string | undefined; promptTitle: string | undefined; originalText: string; wordCount: number; }' but required in type 'Omit<WritingSubmission, "id">'.
+src/components/ListeningPractice.tsx(21,3): error TS6133: 'History' is declared but its value is never read.
+src/services/firebaseUserService.ts(29,5): error TS6133: 'UserAnswer' is declared but its value is never read.
+src/services/firebaseUserService.ts(30,5): error TS6133: 'ReadingAnswer' is declared but its value is never read.
+src/services/firebaseUserService.ts(31,5): error TS6133: 'ListeningAnswer' is declared but its value is never read.
+src/services/firebaseUserService.ts(380,9): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'Record<string, number> | {}'.
+  No index signature with a parameter of type 'string' was found on type 'Record<string, number> | {}'.
+src/services/firebaseUserService.ts(380,53): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'Record<string, number> | {}'.
+  No index signature with a parameter of type 'string' was found on type 'Record<string, number> | {}'.
+src/services/firebaseUserService.ts(600,5): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'Record<string, number> | {}'.
+  No index signature with a parameter of type 'string' was found on type 'Record<string, number> | {}'.
+src/services/firebaseUserService.ts(600,46): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'Record<string, number> | {}'.
+  No index signature with a parameter of type 'string' was found on type 'Record<string, number> | {}'.

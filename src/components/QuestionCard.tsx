@@ -24,14 +24,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const [showExplanation, setShowExplanation] = useState(true);
   const [showVocabOptions, setShowVocabOptions] = useState(false);
   const [showVoiceTutor, setShowVoiceTutor] = useState(false);
-  
+
   const hasAnswered = userAnswer !== undefined;
   const isCorrect = userAnswer?.isCorrect;
   const isLoading = userAnswer?.isLoading;
-  
+
   // Get vocabulary words for vocab vault feature
   const vocabWords = extractVocabularyWords(question);
-  
+
   // Determine difficulty badge color
   const getDifficultyColor = (difficulty?: string) => {
     switch (difficulty) {
@@ -61,14 +61,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           </span>
         )}
       </div>
-      
+
       <p className="question-text">{question.questionText}</p>
-      
+
       <div className="options-container">
         {question.options.map(option => {
           const isSelected = userAnswer?.selectedAnswer === option.letter;
           const isCorrectOption = option.letter === question.correctAnswer;
-          
+
           let optionClass = 'option-button';
           if (hasAnswered) {
             if (isCorrectOption) {
@@ -80,7 +80,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           if (isSelected) {
             optionClass += ' selected';
           }
-          
+
           return (
             <button
               key={option.letter}
@@ -100,22 +100,22 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           );
         })}
       </div>
-      
+
       {/* Explanation Section */}
       {hasAnswered && !isCorrect && (
         <div className="explanation-section">
           <div className="explanation-header">
-            <button 
+            <button
               className="explanation-toggle"
               onClick={() => setShowExplanation(!showExplanation)}
             >
               <span>Açıklama</span>
               {showExplanation ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
             </button>
-            
+
             {/* Voice Tutor Button */}
             {!isLoading && userAnswer?.explanation && (
-              <button 
+              <button
                 className="voice-tutor-btn"
                 onClick={() => setShowVoiceTutor(true)}
                 title="Sesli açıklama al ve soru sor"
@@ -125,7 +125,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               </button>
             )}
           </div>
-          
+
           {showExplanation && (
             <div className="explanation-content">
               {isLoading ? (
@@ -142,11 +142,11 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               )}
             </div>
           )}
-          
+
           {/* Vocab Vault Option */}
           {vocabWords.length > 0 && (
             <div className="vocab-section">
-              <button 
+              <button
                 className="vocab-toggle"
                 onClick={() => setShowVocabOptions(!showVocabOptions)}
               >
@@ -154,7 +154,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 <span>Kelime Kasasına Ekle</span>
                 {showVocabOptions ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               </button>
-              
+
               {showVocabOptions && (
                 <div className="vocab-options">
                   {vocabWords.map(word => {
@@ -164,8 +164,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                         key={word}
                         className={`vocab-word-btn ${isInVault ? 'in-vault' : ''}`}
                         onClick={() => !isInVault && onAddToVault(
-                          word, 
-                          question.questionText, 
+                          word,
+                          question.questionText,
                           question.id
                         )}
                         disabled={isInVault}

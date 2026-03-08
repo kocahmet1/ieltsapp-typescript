@@ -40,8 +40,9 @@ import {
   deleteSpeakingSession,
   getSpeakingStats,
   updateSpeakingStats,
-  clearSpeakingData
-} from '../services/localStorageService';
+  clearTrackingData
+} from '../services/firebaseUserService';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SpeakingPracticeProps {
   isOpen: boolean;
@@ -56,11 +57,11 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
   // View state
   const [viewMode, setViewMode] = useState<ViewMode>('practice');
   const [selectedSection, setSelectedSection] = useState<IELTSSpeakingSection>('section1');
-  
+
   // Question state
   const [currentQuestion, setCurrentQuestion] = useState<SpeakingQuestion | null>(null);
   const [questionIndex, setQuestionIndex] = useState(0);
-  
+
   // Recording state
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [recordingTime, setRecordingTime] = useState(0);
@@ -68,21 +69,32 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  
+
   // Feedback state
   const [feedback, setFeedback] = useState<SpeakingFeedback | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSpeakingFeedback, setIsSpeakingFeedback] = useState(false);
   const [voiceFeedbackEnabled, setVoiceFeedbackEnabled] = useState(true);
-  
+
   // Session state
   const [_currentSession, setCurrentSession] = useState<SpeakingSession | null>(null);
   const [sessions, setSessions] = useState<SpeakingSession[]>([]);
-  const [stats, setStats] = useState<SpeakingStats>(getSpeakingStats());
-  
+  const [stats, setStats] = useState<SpeakingStats>({
+    totalSessions: 0,
+    averageBandScore: 0,
+    averageFluencyScore: 0,
+    averageVocabularyScore: 0,
+    averageGrammarScore: 0,
+    averagePronunciationScore: 0,
+    sessionsBySection: { section1: 0, section2: 0, section3: 0 } as any,
+    recentSessions: []
+  });
+
+  const { user } = useAuth();
+
   // History state
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  
+
   // Refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -90,25 +102,49 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
   const feedbackAudioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const prepTimerRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Load sessions on mount
+
+  // Load sessions on mount or when user changes
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && user) {
       loadSessions();
       loadStats();
       loadRandomQuestion();
+    } else if (isOpen && !user) {
+      setSessions([]);
+      setStats({
+        totalSessions: 0,
+        averageBandScore: 0,
+        averageFluencyScore: 0,
+        averageVocabularyScore: 0,
+        averageGrammarScore: 0,
+        averagePronunciationScore: 0,
+        sessionsBySection: { section1: 0, section2: 0, section3: 0 } as any,
+        recentSessions: []
+      });
+      loadRandomQuestion();
     }
-  }, [isOpen, selectedSection]);
-  
-  const loadSessions = () => {
-    const allSessions = getSpeakingSessions();
-    setSessions(allSessions);
+  }, [isOpen, selectedSection, user]);
+
+  const loadSessions = async () => {
+    if (!user) return;
+    try {
+      const allSessions = await getSpeakingSessions();
+      setSessions(allSessions);
+    } catch (e) {
+      console.error(e);
+    }
   };
-  
-  const loadStats = () => {
-    setStats(getSpeakingStats());
+
+  const loadStats = async () => {
+    if (!user) return;
+    try {
+      const newStats = await getSpeakingStats();
+      setStats(newStats);
+    } catch (e) {
+      console.error(e);
+    }
   };
-  
+
   const loadRandomQuestion = useCallback(() => {
     const questions = getQuestionsBySection(selectedSection);
     if (questions.length > 0) {
@@ -117,7 +153,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
       setQuestionIndex(randomIndex);
     }
   }, [selectedSection]);
-  
+
   const loadNextQuestion = () => {
     const questions = getQuestionsBySection(selectedSection);
     const nextIndex = (questionIndex + 1) % questions.length;
@@ -125,7 +161,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
     setQuestionIndex(nextIndex);
     resetRecordingState();
   };
-  
+
   const loadPrevQuestion = () => {
     const questions = getQuestionsBySection(selectedSection);
     const prevIndex = questionIndex === 0 ? questions.length - 1 : questionIndex - 1;
@@ -133,7 +169,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
     setQuestionIndex(prevIndex);
     resetRecordingState();
   };
-  
+
   const resetRecordingState = () => {
     setRecordingState('idle');
     setRecordingTime(0);
@@ -145,15 +181,15 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
     if (timerRef.current) clearInterval(timerRef.current);
     if (prepTimerRef.current) clearInterval(prepTimerRef.current);
   };
-  
+
   // Start preparation timer (for Section 2)
   const startPreparation = () => {
     if (!currentQuestion) return;
-    
+
     setRecordingState('preparing');
     const prepTime = currentQuestion.preparationTime || 60;
     setPreparationTime(prepTime);
-    
+
     prepTimerRef.current = setInterval(() => {
       setPreparationTime(prev => {
         if (prev <= 1) {
@@ -166,7 +202,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
       });
     }, 1000);
   };
-  
+
   // Start recording
   const startRecording = async () => {
     try {
@@ -174,35 +210,35 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
-      
+
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
-      
+
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         setAudioBlob(audioBlob);
         setAudioUrl(URL.createObjectURL(audioBlob));
         stream.getTracks().forEach(track => track.stop());
       };
-      
+
       mediaRecorder.start();
       setRecordingState('recording');
       setRecordingTime(0);
-      
+
       // Start recording timer
       timerRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
-      
+
     } catch (error) {
       console.error('Error starting recording:', error);
       alert('Mikrofon erişimi sağlanamadı. Lütfen tarayıcı izinlerini kontrol edin.');
     }
   };
-  
+
   // Stop recording
   const stopRecording = () => {
     if (mediaRecorderRef.current && recordingState === 'recording') {
@@ -213,11 +249,11 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
       setRecordingState('complete');
     }
   };
-  
+
   // Play/pause recorded audio
   const togglePlayback = () => {
     if (!audioRef.current || !audioUrl) return;
-    
+
     if (isPlaying) {
       audioRef.current.pause();
     } else {
@@ -225,31 +261,31 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
     }
     setIsPlaying(!isPlaying);
   };
-  
+
   // Handle audio end
   const handleAudioEnd = () => {
     setIsPlaying(false);
   };
-  
+
   // Submit for analysis
   const submitForAnalysis = async () => {
     if (!audioBlob || !currentQuestion || !isOpenAIConfigured) return;
-    
+
     setIsAnalyzing(true);
     setRecordingState('processing');
-    
+
     try {
       // Transcribe audio
       const transcript = await transcribeAudio(audioBlob);
-      
+
       if (!transcript || transcript.trim().length === 0) {
         throw new Error('Ses kaydı metne çevrilemedi. Lütfen daha yüksek sesle konuşmayı deneyin.');
       }
-      
+
       // Analyze speaking
       const speakingFeedback = await analyzeSpeaking(transcript, currentQuestion);
       setFeedback(speakingFeedback);
-      
+
       // Save session
       const sessionData: Omit<SpeakingSession, 'id'> = {
         questionId: currentQuestion.id,
@@ -260,21 +296,29 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
         startedAt: new Date(),
         completedAt: new Date()
       };
-      
-      const sessionId = saveSpeakingSession(sessionData);
+
+      const sessionId = await saveSpeakingSession(sessionData);
       if (sessionId) {
         const newSession = { ...sessionData, id: sessionId };
         setCurrentSession(newSession as SpeakingSession);
-        updateSpeakingStats(newSession as SpeakingSession);
-        loadSessions();
-        loadStats();
+        if (selectedSection) {
+          await updateSpeakingStats(selectedSection, {
+            overall: speakingFeedback.overallBandScore,
+            fluency: speakingFeedback.fluencyScore,
+            vocab: speakingFeedback.vocabularyScore,
+            grammar: speakingFeedback.grammarScore,
+            pronunciation: speakingFeedback.pronunciationScore
+          });
+        }
+        await loadSessions();
+        await loadStats();
       }
-      
+
       // Generate voice feedback if enabled
       if (voiceFeedbackEnabled && speakingFeedback.overallBandScore > 0) {
         playVoiceFeedback(speakingFeedback);
       }
-      
+
     } catch (error) {
       console.error('Error analyzing speaking:', error);
       setFeedback({
@@ -292,19 +336,19 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
       setIsAnalyzing(false);
     }
   };
-  
+
   // Play voice feedback
   const playVoiceFeedback = async (feedback: SpeakingFeedback) => {
     if (!voiceFeedbackEnabled) return;
-    
+
     try {
       setIsSpeakingFeedback(true);
       const feedbackText = generateVoiceFeedbackText(feedback);
       const audioBuffer = await generateSpeech(feedbackText, 'nova');
-      
+
       const blob = new Blob([audioBuffer], { type: 'audio/mp3' });
       const url = URL.createObjectURL(blob);
-      
+
       if (feedbackAudioRef.current) {
         feedbackAudioRef.current.src = url;
         feedbackAudioRef.current.play();
@@ -318,7 +362,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
       setIsSpeakingFeedback(false);
     }
   };
-  
+
   // Stop voice feedback
   const stopVoiceFeedback = () => {
     if (feedbackAudioRef.current) {
@@ -327,14 +371,14 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
       setIsSpeakingFeedback(false);
     }
   };
-  
+
   // Format time
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
-  
+
   // Get band score color
   const getBandScoreColor = (score: number): string => {
     if (score >= 7) return 'var(--accent-green)';
@@ -342,37 +386,37 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
     if (score >= 4) return 'var(--accent-orange)';
     return 'var(--accent-red)';
   };
-  
+
   // Handle section change
   const handleSectionChange = (section: IELTSSpeakingSection) => {
     setSelectedSection(section);
     resetRecordingState();
   };
-  
+
   // Delete session
-  const handleDeleteSession = (sessionId: string) => {
+  const handleDeleteSession = async (sessionId: string) => {
     if (deleteConfirmId === sessionId) {
-      deleteSpeakingSession(sessionId);
-      loadSessions();
-      loadStats();
+      await deleteSpeakingSession(sessionId);
+      await loadSessions();
+      await loadStats();
       setDeleteConfirmId(null);
     } else {
       setDeleteConfirmId(sessionId);
       setTimeout(() => setDeleteConfirmId(null), 3000);
     }
   };
-  
+
   // Clear all data
-  const handleClearData = () => {
+  const handleClearData = async () => {
     if (confirm('Tüm konuşma pratik verilerini silmek istediğinizden emin misiniz?')) {
-      clearSpeakingData();
-      loadSessions();
-      loadStats();
+      await clearTrackingData();
+      await loadSessions();
+      await loadStats();
     }
   };
-  
+
   if (!isOpen) return null;
-  
+
   return (
     <div className="speaking-overlay">
       <div className="speaking-panel">
@@ -382,7 +426,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
             <Mic size={24} />
             <h2>IELTS Konuşma Pratiği</h2>
           </div>
-          
+
           <div className="speaking-header-actions">
             <button
               className={`mode-btn ${viewMode === 'practice' ? 'active' : ''}`}
@@ -407,12 +451,12 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
               <span>İstatistik</span>
             </button>
           </div>
-          
+
           <button className="close-btn" onClick={onClose}>
             <X size={24} />
           </button>
         </div>
-        
+
         {/* Content */}
         <div className="speaking-content">
           {/* API Warning */}
@@ -422,7 +466,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
               <span>OpenAI API yapılandırılmamış. Ses analizi ve geri bildirim için API anahtarı gereklidir.</span>
             </div>
           )}
-          
+
           {viewMode === 'practice' && (
             <div className="practice-mode">
               {/* Section Selector */}
@@ -448,15 +492,15 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                   {IELTS_SECTION_DESCRIPTIONS[selectedSection]}
                 </p>
               </div>
-              
+
               {/* Question Card */}
               {currentQuestion && (
                 <div className="question-card-speaking">
                   <div className="question-card-header">
                     <span className="topic-badge">{currentQuestion.topic}</span>
                     <span className={`difficulty-badge difficulty-${currentQuestion.difficulty}`}>
-                      {currentQuestion.difficulty === 'easy' ? 'Kolay' : 
-                       currentQuestion.difficulty === 'medium' ? 'Orta' : 'Zor'}
+                      {currentQuestion.difficulty === 'easy' ? 'Kolay' :
+                        currentQuestion.difficulty === 'medium' ? 'Orta' : 'Zor'}
                     </span>
                     {currentQuestion.speakingTime && (
                       <span className="time-badge">
@@ -465,11 +509,11 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                       </span>
                     )}
                   </div>
-                  
+
                   <div className="question-text-speaking">
                     {currentQuestion.questionText}
                   </div>
-                  
+
                   {/* Cue Card Points (Section 2) */}
                   {currentQuestion.cueCardPoints && (
                     <div className="cue-card-points">
@@ -481,7 +525,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                       </ul>
                     </div>
                   )}
-                  
+
                   {/* Follow-up Questions (Section 1 & 3) */}
                   {currentQuestion.followUpQuestions && currentQuestion.followUpQuestions.length > 0 && (
                     <div className="follow-up-questions">
@@ -493,7 +537,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                       </ul>
                     </div>
                   )}
-                  
+
                   {/* Question Navigation */}
                   <div className="question-nav-speaking">
                     <button onClick={loadPrevQuestion} disabled={recordingState === 'recording'}>
@@ -511,7 +555,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                   </div>
                 </div>
               )}
-              
+
               {/* Recording Section */}
               <div className="recording-section">
                 {/* Preparation Timer (Section 2) */}
@@ -523,7 +567,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                     <h3>Hazırlık Süresi</h3>
                     <div className="prep-time">{formatTime(preparationTime)}</div>
                     <p>Notlarınızı hazırlayın. Kayıt otomatik başlayacak.</p>
-                    <button 
+                    <button
                       className="skip-prep-btn"
                       onClick={() => {
                         if (prepTimerRef.current) clearInterval(prepTimerRef.current);
@@ -534,14 +578,14 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                     </button>
                   </div>
                 )}
-                
+
                 {/* Recording Controls */}
                 {recordingState !== 'preparing' && (
                   <div className="recording-controls">
                     {recordingState === 'idle' && (
                       <>
                         {selectedSection === 'section2' ? (
-                          <button 
+                          <button
                             className="record-btn start"
                             onClick={startPreparation}
                             disabled={!isOpenAIConfigured}
@@ -550,7 +594,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                             <span>Hazırlığı Başlat (1 dk)</span>
                           </button>
                         ) : (
-                          <button 
+                          <button
                             className="record-btn start"
                             onClick={startRecording}
                             disabled={!isOpenAIConfigured}
@@ -561,7 +605,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                         )}
                       </>
                     )}
-                    
+
                     {recordingState === 'recording' && (
                       <div className="recording-active">
                         <div className="recording-indicator">
@@ -570,7 +614,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                         </div>
                         <div className="recording-time">{formatTime(recordingTime)}</div>
                         <p className="recording-hint">Konuşmanızı kayıt ediyoruz...</p>
-                        <button 
+                        <button
                           className="record-btn stop"
                           onClick={stopRecording}
                         >
@@ -579,11 +623,11 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                         </button>
                       </div>
                     )}
-                    
+
                     {recordingState === 'complete' && !feedback && (
                       <div className="recording-complete">
                         <div className="playback-controls">
-                          <button 
+                          <button
                             className="playback-btn"
                             onClick={togglePlayback}
                           >
@@ -593,9 +637,9 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                             Kayıt süresi: {formatTime(recordingTime)}
                           </span>
                         </div>
-                        
+
                         <div className="action-buttons">
-                          <button 
+                          <button
                             className="analyze-btn"
                             onClick={submitForAnalysis}
                             disabled={isAnalyzing}
@@ -612,8 +656,8 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                               </>
                             )}
                           </button>
-                          
-                          <button 
+
+                          <button
                             className="retry-btn"
                             onClick={resetRecordingState}
                           >
@@ -623,7 +667,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                         </div>
                       </div>
                     )}
-                    
+
                     {recordingState === 'processing' && (
                       <div className="processing-state">
                         <Loader2 size={48} className="spinner" />
@@ -634,14 +678,14 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                   </div>
                 )}
               </div>
-              
+
               {/* Feedback Section */}
               {feedback && feedback.overallBandScore > 0 && (
                 <div className="feedback-section">
                   {/* Score Overview */}
                   <div className="score-overview">
                     <div className="main-score">
-                      <div 
+                      <div
                         className="score-circle"
                         style={{ background: `conic-gradient(${getBandScoreColor(feedback.overallBandScore)} ${feedback.overallBandScore * 11.11}%, var(--bg-tertiary) 0)` }}
                       >
@@ -651,7 +695,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="sub-scores">
                       <div className="sub-score">
                         <span className="sub-label">Akıcılık</span>
@@ -679,7 +723,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Voice Feedback Toggle */}
                   <div className="voice-feedback-controls">
                     <button
@@ -689,16 +733,16 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                       {voiceFeedbackEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
                       <span>Sesli Geri Bildirim</span>
                     </button>
-                    
+
                     {isSpeakingFeedback && (
                       <button className="stop-voice-btn" onClick={stopVoiceFeedback}>
                         <Square size={16} />
                         <span>Durdur</span>
                       </button>
                     )}
-                    
+
                     {!isSpeakingFeedback && voiceFeedbackEnabled && feedback.overallBandScore > 0 && (
-                      <button 
+                      <button
                         className="play-feedback-btn"
                         onClick={() => playVoiceFeedback(feedback)}
                       >
@@ -707,7 +751,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                       </button>
                     )}
                   </div>
-                  
+
                   {/* Transcript */}
                   <div className="transcript-section">
                     <h3>
@@ -718,7 +762,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                       {feedback.transcript || 'Transkript oluşturulamadı.'}
                     </div>
                   </div>
-                  
+
                   {/* Summary */}
                   <div className="summary-section">
                     <h3>
@@ -727,7 +771,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                     </h3>
                     <p>{feedback.summary}</p>
                   </div>
-                  
+
                   {/* Corrections */}
                   {feedback.corrections && feedback.corrections.length > 0 && (
                     <div className="corrections-section">
@@ -741,8 +785,8 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                             <div className="correction-header">
                               <span className={`correction-type type-${correction.type}`}>
                                 {correction.type === 'grammar' ? 'Dilbilgisi' :
-                                 correction.type === 'vocabulary' ? 'Kelime' :
-                                 correction.type === 'pronunciation' ? 'Telaffuz' : 'Akıcılık'}
+                                  correction.type === 'vocabulary' ? 'Kelime' :
+                                    correction.type === 'pronunciation' ? 'Telaffuz' : 'Akıcılık'}
                               </span>
                             </div>
                             <div className="correction-content">
@@ -758,7 +802,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Suggestions */}
                   {feedback.suggestions && feedback.suggestions.length > 0 && (
                     <div className="suggestions-section">
@@ -773,7 +817,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                       </ul>
                     </div>
                   )}
-                  
+
                   {/* Model Answer */}
                   {feedback.modelAnswer && (
                     <div className="model-answer-section">
@@ -786,17 +830,17 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Try Again */}
                   <div className="feedback-actions">
-                    <button 
+                    <button
                       className="try-again-btn"
                       onClick={resetRecordingState}
                     >
                       <RefreshCw size={18} />
                       <span>Bu Soruyu Tekrar Dene</span>
                     </button>
-                    <button 
+                    <button
                       className="next-question-btn"
                       onClick={loadNextQuestion}
                     >
@@ -806,7 +850,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                   </div>
                 </div>
               )}
-              
+
               {/* Error State */}
               {feedback && feedback.overallBandScore === 0 && (
                 <div className="error-feedback">
@@ -821,7 +865,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
               )}
             </div>
           )}
-          
+
           {viewMode === 'history' && (
             <div className="history-mode">
               {sessions.length === 0 ? (
@@ -844,7 +888,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                           <span className="topic-tag">{session.question.topic}</span>
                         </div>
                         {session.feedback && session.feedback.overallBandScore > 0 && (
-                          <div 
+                          <div
                             className="history-score"
                             style={{ color: getBandScoreColor(session.feedback.overallBandScore) }}
                           >
@@ -852,11 +896,11 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="history-question-text">
                         {session.question.questionText}
                       </div>
-                      
+
                       <div className="history-item-meta">
                         <span className="history-date">
                           <Clock size={14} />
@@ -866,7 +910,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                           {formatTime(session.duration)}
                         </span>
                       </div>
-                      
+
                       <div className="history-item-actions">
                         <button
                           className={`delete-btn ${deleteConfirmId === session.id ? 'confirm' : ''}`}
@@ -882,7 +926,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
               )}
             </div>
           )}
-          
+
           {viewMode === 'stats' && (
             <div className="stats-mode">
               {stats.totalSessions === 0 ? (
@@ -908,7 +952,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                         <span className="stat-label">Toplam Pratik</span>
                       </div>
                     </div>
-                    
+
                     <div className="stat-card">
                       <div className="stat-icon band-icon" style={{ background: getBandScoreColor(stats.averageBandScore) }}>
                         <span>{stats.averageBandScore}</span>
@@ -917,7 +961,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                         <span className="stat-label">Ortalama Band</span>
                       </div>
                     </div>
-                    
+
                     <div className="stat-card">
                       <div className="stat-icon fluency-icon">
                         <span>{stats.averageFluencyScore}</span>
@@ -926,7 +970,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                         <span className="stat-label">Ortalama Akıcılık</span>
                       </div>
                     </div>
-                    
+
                     <div className="stat-card">
                       <div className="stat-icon vocab-icon">
                         <span>{stats.averageVocabularyScore}</span>
@@ -936,7 +980,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Section Breakdown */}
                   <div className="section-breakdown">
                     <h3>Bölüm Dağılımı</h3>
@@ -951,7 +995,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                               <span>{count} pratik</span>
                             </div>
                             <div className="section-bar">
-                              <div 
+                              <div
                                 className="section-bar-fill"
                                 style={{ width: `${percentage}%` }}
                               />
@@ -961,7 +1005,7 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                       })}
                     </div>
                   </div>
-                  
+
                   {/* Score Breakdown */}
                   <div className="score-breakdown">
                     <h3>Puan Dağılımı</h3>
@@ -978,9 +1022,9 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                             <span style={{ color: getBandScoreColor(item.value) }}>{item.value}</span>
                           </div>
                           <div className="score-bar">
-                            <div 
+                            <div
                               className="score-bar-fill"
-                              style={{ 
+                              style={{
                                 width: `${(item.value / 9) * 100}%`,
                                 background: getBandScoreColor(item.value)
                               }}
@@ -990,10 +1034,10 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
                       ))}
                     </div>
                   </div>
-                  
+
                   {/* Clear Data */}
                   <div className="clear-data-section">
-                    <button 
+                    <button
                       className="clear-data-btn"
                       onClick={handleClearData}
                     >
@@ -1007,15 +1051,15 @@ export function SpeakingPractice({ isOpen, onClose, isOpenAIConfigured }: Speaki
           )}
         </div>
       </div>
-      
+
       {/* Hidden audio elements */}
-      <audio 
-        ref={audioRef} 
-        src={audioUrl || ''} 
+      <audio
+        ref={audioRef}
+        src={audioUrl || ''}
         onEnded={handleAudioEnd}
         style={{ display: 'none' }}
       />
-      <audio 
+      <audio
         ref={feedbackAudioRef}
         style={{ display: 'none' }}
       />

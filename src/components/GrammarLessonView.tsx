@@ -368,191 +368,201 @@ export function GrammarLessonView({ topic, onClose, onComplete }: GrammarLessonV
     if (viewMode === 'practice') {
         return (
             <div className="modal-overlay">
-                <div className="modal-content grammar-lesson-view-modal">
-                    <div className="modal-header">
-                        <div className="modal-title">
-                            <span className="lesson-icon-large">{lesson.icon}</span>
-                            <div>
-                                <h2>{lesson.title} - Quiz {selectedQuizId}</h2>
-                                <p className="subtitle">Exercise {currentExerciseIndex + 1} of {filteredExercises.length}</p>
+                <div className={`modal-content grammar-lesson-view-modal ${showVoiceTutor ? 'grammar-split-active' : ''}`}>
+                    {/* ===== LEFT PANEL — Voice Tutor ===== */}
+                    {showVoiceTutor && (
+                        <div className="grammar-voice-panel">
+                            <div className="grammar-voice-tutor-inline">
+                                <VoiceTutor
+                                    isOpen={true}
+                                    onClose={() => setShowVoiceTutor(false)}
+                                    mode="question"
+                                    questionText={currentExercise?.question || ''}
+                                    explanation={currentExercise?.explanation || ''}
+                                    studentAnswer={userAnswers.get(currentExercise?.id ?? 0) || ''}
+                                    correctAnswer={Array.isArray(currentExercise?.correctAnswer) ? currentExercise.correctAnswer.join(', ') : currentExercise?.correctAnswer || ''}
+                                    autoStart={true}
+                                    inline={true}
+                                />
                             </div>
                         </div>
-                        <button className="close-btn" onClick={onClose}>
-                            <X size={24} />
-                        </button>
-                    </div>
+                    )}
 
-                    <div className="practice-progress-bar">
-                        <div
-                            className="practice-progress-fill"
-                            style={{ width: `${((currentExerciseIndex + 1) / filteredExercises.length) * 100}%` }}
-                        />
-                    </div>
-
-                    <div className="exercise-wrapper">
-                        {currentExercise && (
-                            <div className="exercise-card">
-                                <div className="exercise-header">
-                                    <span className="exercise-type">
-                                        {currentExercise.type.replace('-', ' ')}
-                                    </span>
-                                    <span className={`exercise-difficulty ${currentExercise.difficulty}`}>
-                                        {currentExercise.difficulty}
-                                    </span>
+                    {/* ===== RIGHT PANEL — Quiz Content ===== */}
+                    <div className="grammar-quiz-panel">
+                        <div className="modal-header">
+                            <div className="modal-title">
+                                <span className="lesson-icon-large">{lesson.icon}</span>
+                                <div>
+                                    <h2>{lesson.title} - Quiz {selectedQuizId}</h2>
+                                    <p className="subtitle">Exercise {currentExerciseIndex + 1} of {filteredExercises.length}</p>
                                 </div>
-
-                                <div className="exercise-question">
-                                    {currentExercise.question}
-                                </div>
-
-                                {/* Multiple Choice / Fill in Blank with options */}
-                                {(currentExercise.type === 'multiple-choice' || currentExercise.type === 'fill-in-blank') && currentExercise.options && (
-                                    <div className="exercise-options">
-                                        {currentExercise.options.map((option, idx) => {
-                                            const isSelected = userAnswers.get(currentExercise.id) === option;
-                                            const answered = showFeedback.get(currentExercise.id);
-                                            const isCorrect = option === currentExercise.correctAnswer;
-
-                                            return (
-                                                <button
-                                                    key={idx}
-                                                    className={`option-btn ${isSelected ? 'selected' : ''} ${answered && isCorrect ? 'correct' : ''} ${answered && isSelected && !isCorrect ? 'incorrect' : ''}`}
-                                                    onClick={() => handleAnswer(currentExercise.id, option)}
-                                                    disabled={answered}
-                                                >
-                                                    <span className="option-letter">{String.fromCharCode(65 + idx)}</span>
-                                                    <span className="option-text">{option}</span>
-                                                    {answered && isCorrect && <Check size={20} />}
-                                                    {answered && isSelected && !isCorrect && <X size={20} />}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-
-                                {/* Error Correction */}
-                                {currentExercise.type === 'error-correction' && (
-                                    <div className="error-correction-input">
-                                        <textarea
-                                            placeholder="Type the corrected sentence..."
-                                            value={userAnswers.get(currentExercise.id) || ''}
-                                            onChange={(e) => handleAnswer(currentExercise.id, e.target.value)}
-                                            rows={3}
-                                        />
-                                        {!showFeedback.get(currentExercise.id) && (
-                                            <button
-                                                className="btn-check-answer"
-                                                onClick={() => {
-                                                    const newFeedback = new Map(showFeedback);
-                                                    newFeedback.set(currentExercise.id, true);
-                                                    setShowFeedback(newFeedback);
-                                                }}
-                                                disabled={!userAnswers.get(currentExercise.id)}
-                                            >
-                                                Check Answer
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Feedback */}
-                                {showFeedback.get(currentExercise.id) && (
-                                    <div className={`exercise-feedback ${userAnswers.get(currentExercise.id) === currentExercise.correctAnswer ? 'correct' : 'incorrect'}`}>
-                                        <div className="feedback-header">
-                                            {userAnswers.get(currentExercise.id) === currentExercise.correctAnswer ? (
-                                                <>
-                                                    <Check size={24} />
-                                                    <span>Correct!</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <AlertCircle size={24} />
-                                                    <span>Incorrect</span>
-                                                    <button
-                                                        className="voice-tutor-btn"
-                                                        onClick={() => setShowVoiceTutor(true)}
-                                                        title="Sesli açıklama al ve soru sor"
-                                                    >
-                                                        <Headphones size={18} />
-                                                        <span>Sesli Öğretmen</span>
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
-                                        <div className="feedback-content">
-                                            <p><strong>Explanation:</strong> {currentExercise.explanation}</p>
-                                            {userAnswers.get(currentExercise.id) !== currentExercise.correctAnswer && (
-                                                <p><strong>Correct Answer:</strong> {currentExercise.correctAnswer}</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Hint */}
-                                {currentExercise.hint && !showFeedback.get(currentExercise.id) && (
-                                    <div className="exercise-hint-wrapper">
-                                        <button
-                                            className="btn-hint"
-                                            onClick={() => toggleHint(currentExercise.id)}
-                                        >
-                                            <Lightbulb size={18} />
-                                            {showHint.get(currentExercise.id) ? 'Hide Hint' : 'Show Hint'}
-                                        </button>
-                                        {showHint.get(currentExercise.id) && (
-                                            <div className="hint-content">
-                                                {currentExercise.hint}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
                             </div>
-                        )}
-
-                        {/* Voice Tutor Modal */}
-                        {showVoiceTutor && currentExercise && userAnswers.get(currentExercise.id) !== currentExercise.correctAnswer && (
-                            <VoiceTutor
-                                isOpen={showVoiceTutor}
-                                onClose={() => setShowVoiceTutor(false)}
-                                questionText={currentExercise.question}
-                                explanation={currentExercise.explanation}
-                                studentAnswer={userAnswers.get(currentExercise.id) || ''}
-                                correctAnswer={Array.isArray(currentExercise.correctAnswer) ? currentExercise.correctAnswer.join(', ') : currentExercise.correctAnswer}
-                            />
-                        )}
-
-                        {/* Navigation */}
-                        <div className="exercise-navigation">
-                            <button
-                                className="btn-nav"
-                                onClick={prevExercise}
-                                disabled={currentExerciseIndex === 0}
-                            >
-                                <ChevronLeft size={20} />
-                                Previous
+                            <button className="close-btn" onClick={onClose}>
+                                <X size={24} />
                             </button>
+                        </div>
 
-                            <span className="exercise-counter">
-                                {currentExerciseIndex + 1} / {filteredExercises.length}
-                            </span>
+                        <div className="practice-progress-bar">
+                            <div
+                                className="practice-progress-fill"
+                                style={{ width: `${((currentExerciseIndex + 1) / filteredExercises.length) * 100}%` }}
+                            />
+                        </div>
 
-                            {currentExerciseIndex < filteredExercises.length - 1 ? (
+                        <div className="exercise-wrapper">
+                            {currentExercise && (
+                                <div className="exercise-card">
+                                    <div className="exercise-header">
+                                        <span className="exercise-type">
+                                            {currentExercise.type.replace('-', ' ')}
+                                        </span>
+                                        <span className={`exercise-difficulty ${currentExercise.difficulty}`}>
+                                            {currentExercise.difficulty}
+                                        </span>
+                                    </div>
+
+                                    <div className="exercise-question">
+                                        {currentExercise.question}
+                                    </div>
+
+                                    {/* Multiple Choice / Fill in Blank with options */}
+                                    {(currentExercise.type === 'multiple-choice' || currentExercise.type === 'fill-in-blank') && currentExercise.options && (
+                                        <div className="exercise-options">
+                                            {currentExercise.options.map((option, idx) => {
+                                                const isSelected = userAnswers.get(currentExercise.id) === option;
+                                                const answered = showFeedback.get(currentExercise.id);
+                                                const isCorrect = option === currentExercise.correctAnswer;
+
+                                                return (
+                                                    <button
+                                                        key={idx}
+                                                        className={`option-btn ${isSelected ? 'selected' : ''} ${answered && isCorrect ? 'correct' : ''} ${answered && isSelected && !isCorrect ? 'incorrect' : ''}`}
+                                                        onClick={() => handleAnswer(currentExercise.id, option)}
+                                                        disabled={answered}
+                                                    >
+                                                        <span className="option-letter">{String.fromCharCode(65 + idx)}</span>
+                                                        <span className="option-text">{option}</span>
+                                                        {answered && isCorrect && <Check size={20} />}
+                                                        {answered && isSelected && !isCorrect && <X size={20} />}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {/* Error Correction */}
+                                    {currentExercise.type === 'error-correction' && (
+                                        <div className="error-correction-input">
+                                            <textarea
+                                                placeholder="Type the corrected sentence..."
+                                                value={userAnswers.get(currentExercise.id) || ''}
+                                                onChange={(e) => handleAnswer(currentExercise.id, e.target.value)}
+                                                rows={3}
+                                            />
+                                            {!showFeedback.get(currentExercise.id) && (
+                                                <button
+                                                    className="btn-check-answer"
+                                                    onClick={() => {
+                                                        const newFeedback = new Map(showFeedback);
+                                                        newFeedback.set(currentExercise.id, true);
+                                                        setShowFeedback(newFeedback);
+                                                    }}
+                                                    disabled={!userAnswers.get(currentExercise.id)}
+                                                >
+                                                    Check Answer
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Feedback */}
+                                    {showFeedback.get(currentExercise.id) && (
+                                        <div className={`exercise-feedback ${userAnswers.get(currentExercise.id) === currentExercise.correctAnswer ? 'correct' : 'incorrect'}`}>
+                                            <div className="feedback-header">
+                                                {userAnswers.get(currentExercise.id) === currentExercise.correctAnswer ? (
+                                                    <>
+                                                        <Check size={24} />
+                                                        <span>Correct!</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <AlertCircle size={24} />
+                                                        <span>Incorrect</span>
+                                                        <button
+                                                            className="voice-tutor-btn"
+                                                            onClick={() => setShowVoiceTutor(true)}
+                                                            title="Sesli açıklama al ve soru sor"
+                                                        >
+                                                            <Headphones size={18} />
+                                                            <span>Sesli Öğretmen</span>
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                            <div className="feedback-content">
+                                                <p><strong>Explanation:</strong> {currentExercise.explanation}</p>
+                                                {userAnswers.get(currentExercise.id) !== currentExercise.correctAnswer && (
+                                                    <p><strong>Correct Answer:</strong> {currentExercise.correctAnswer}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Hint */}
+                                    {currentExercise.hint && !showFeedback.get(currentExercise.id) && (
+                                        <div className="exercise-hint-wrapper">
+                                            <button
+                                                className="btn-hint"
+                                                onClick={() => toggleHint(currentExercise.id)}
+                                            >
+                                                <Lightbulb size={18} />
+                                                {showHint.get(currentExercise.id) ? 'Hide Hint' : 'Show Hint'}
+                                            </button>
+                                            {showHint.get(currentExercise.id) && (
+                                                <div className="hint-content">
+                                                    {currentExercise.hint}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Navigation */}
+                            <div className="exercise-navigation">
                                 <button
                                     className="btn-nav"
-                                    onClick={nextExercise}
+                                    onClick={prevExercise}
+                                    disabled={currentExerciseIndex === 0}
                                 >
-                                    Next
-                                    <ChevronRight size={20} />
+                                    <ChevronLeft size={20} />
+                                    Previous
                                 </button>
-                            ) : (
-                                <button
-                                    className="btn-complete"
-                                    onClick={handleCompleteLesson}
-                                    disabled={!allExercisesAnswered}
-                                >
-                                    Complete Quiz
-                                    <Award size={20} />
-                                </button>
-                            )}
+
+                                <span className="exercise-counter">
+                                    {currentExerciseIndex + 1} / {filteredExercises.length}
+                                </span>
+
+                                {currentExerciseIndex < filteredExercises.length - 1 ? (
+                                    <button
+                                        className="btn-nav"
+                                        onClick={nextExercise}
+                                    >
+                                        Next
+                                        <ChevronRight size={20} />
+                                    </button>
+                                ) : (
+                                    <button
+                                        className="btn-complete"
+                                        onClick={handleCompleteLesson}
+                                        disabled={!allExercisesAnswered}
+                                    >
+                                        Complete Quiz
+                                        <Award size={20} />
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

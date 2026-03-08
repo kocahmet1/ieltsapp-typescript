@@ -21,13 +21,13 @@ export const ExamView = ({
   vocabWordsInVault
 }: ExamViewProps) => {
   const topRef = useRef<HTMLDivElement>(null);
-  
+
   // Calculate stats
   const totalAnswered = userAnswers.size;
   const correctCount = Array.from(userAnswers.values()).filter(a => a.isCorrect).length;
   const incorrectCount = totalAnswered - correctCount;
   const percentage = totalAnswered > 0 ? Math.round((correctCount / totalAnswered) * 100) : 0;
-  
+
   const scrollToTop = () => {
     topRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -74,32 +74,32 @@ export const ExamView = ({
             </button>
           )}
         </div>
-        
+
         {/* Progress bar */}
         <div className="progress-bar">
-          <div 
-            className="progress-correct" 
+          <div
+            className="progress-correct"
             style={{ width: `${(correctCount / exam.questions.length) * 100}%` }}
           />
-          <div 
-            className="progress-incorrect" 
+          <div
+            className="progress-incorrect"
             style={{ width: `${(incorrectCount / exam.questions.length) * 100}%` }}
           />
         </div>
       </div>
-      
+
       {/* Exam Header */}
       <div className="exam-header">
         <h1>{exam.name}</h1>
         {exam.description && <p className="exam-description">{exam.description}</p>}
       </div>
-      
+
       {/* Questions grouped by difficulty */}
       <div className="questions-container">
         {difficultyOrder.map(difficulty => {
           const questions = questionsByDifficulty[difficulty];
           if (!questions || questions.length === 0) return null;
-          
+
           return (
             <div key={difficulty} className="difficulty-section">
               <h2 className="difficulty-header">{difficulty}</h2>
@@ -120,7 +120,7 @@ export const ExamView = ({
           );
         })}
       </div>
-      
+
       {/* Scroll to top button */}
       <button className="scroll-to-top" onClick={scrollToTop}>
         <ChevronUp size={24} />

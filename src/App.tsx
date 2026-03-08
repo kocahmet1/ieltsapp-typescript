@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { BookOpen, Moon, Sun, AlertCircle, Settings, BarChart3, PenLine, FileText, Mic, Headphones } from 'lucide-react';
 import { ExamSelector } from './components/ExamSelector';
 import { ExamView } from './components/ExamView';
 import { ImportExamModal } from './components/ImportExamModal';
+import { AuthModal } from './components/AuthModal';
+import { useAuth } from './contexts/AuthContext';
 import { VocabVault } from './components/VocabVault';
 import { AdminPage } from './components/AdminPage';
 import { PerformanceTracker } from './components/PerformanceTracker';
@@ -26,30 +28,31 @@ import {
   getLocalVocabWords,
   addLocalVocabWord,
   removeLocalVocabWord,
+  getWritingPrompts
+} from './services/localStorageService';
+import {
   addMistakeRecord,
   updateAnswerStats,
   getPerformanceStats,
   getRecentMistakes,
-  getMistakesByCategory,
   clearTrackingData,
   getWritingSubmissions,
   saveWritingSubmission,
   updateWritingSubmission,
   deleteWritingSubmission,
-  getWritingPrompts,
   getReadingProgress,
+  getAllReadingProgress,
   saveReadingProgress,
   deleteReadingProgress,
   getReadingStats,
   updateReadingStats,
-  getCompletedPassageIds,
   getListeningProgress,
+  getAllListeningProgress,
   saveListeningProgress,
   deleteListeningProgress,
   getListeningStats,
-  updateListeningStats,
-  getCompletedListeningTestIds
-} from './services/localStorageService';
+  updateListeningStats
+} from './services/firebaseUserService';
 import { sampleExamQuestions, sampleExamName, sampleExamDescription } from './data/sampleExam';
 import './App.css';
 
@@ -62,10 +65,7 @@ function App() {
 
   // Firebase check
   const [useFirebase] = useState(isFirebaseConfigured());
-  const [openAIConfigured] = useState(() => {
-    const key = import.meta.env.VITE_OPENAI_API_KEY;
-    return Boolean(key && key !== 'your-openai-api-key-here' && key.startsWith('sk-'));
-  });
+  const [openAIConfigured, setOpenAIConfigured] = useState(false);
 
   // Exam states
   const [exams, setExams] = useState<{ id: string; name: string; description?: string; questionCount: number }[]>([]);
@@ -77,6 +77,8 @@ function App() {
 
   // Modal states
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [showVocabVault, setShowVocabVault] = useState(false);
   const [showAdminPage, setShowAdminPage] = useState(false);
   const [showPerformanceTracker, setShowPerformanceTracker] = useState(false);
@@ -95,13 +97,14 @@ function App() {
 
   // Reading comprehension state
   const [completedPassageIds, setCompletedPassageIds] = useState<string[]>([]);
-  const [readingStats, setReadingStats] = useState<ReadingStats>(getReadingStats());
+  const [readingStats, setReadingStats] = useState<ReadingStats>({ totalPassagesCompleted: 0, totalQuestionsAnswered: 0, totalCorrect: 0, averageScore: 0, passagesByDifficulty: {} as Record<string, number>, questionTypePerformance: {} as any });
 
   // Listening practice state
   const [completedListeningTestIds, setCompletedListeningTestIds] = useState<string[]>([]);
-  const [listeningStats, setListeningStats] = useState<ListeningStats>(getListeningStats());
+  const [listeningStats, setListeningStats] = useState<ListeningStats>({ totalTestsCompleted: 0, totalQuestionsAnswered: 0, totalCorrect: 0, averageScore: 0, testsBySection: {} as any, testsByDifficulty: {} as Record<string, number>, questionTypePerformance: {} as any });
 
   // Performance tracking state
+  const { user, logout } = useAuth();
   const [performanceStats, setPerformanceStats] = useState<PerformanceStats>({
     totalAnswered: 0,
     totalCorrect: 0,
@@ -112,27 +115,82 @@ function App() {
   });
   const [recentMistakes, setRecentMistakes] = useState<MistakeRecord[]>([]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    fetch('/api/config')
+      .then(async response => {
+        if (!response.ok) {
+          throw new Error('Config request failed');
+        }
+        return response.json() as Promise<{ openaiConfigured?: boolean }>;
+      })
+      .then(data => {
+        if (isMounted) {
+          setOpenAIConfigured(Boolean(data.openaiConfigured));
+        }
+      })
+      .catch(error => {
+        console.error('Failed to load runtime config:', error);
+        if (isMounted) {
+          setOpenAIConfigured(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Apply theme
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
     localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
   }, [isDarkMode]);
 
-  // Load exams on mount
+  // Load exams and static data on mount
   useEffect(() => {
     loadExams();
     loadVocabWords();
-    loadPerformanceData();
-    loadWritingSubmissions();
-    loadReadingData();
-    loadListeningData();
   }, []);
 
-  const loadPerformanceData = () => {
-    const stats = getPerformanceStats();
-    const recent = getRecentMistakes(7);
-    setPerformanceStats(stats);
-    setRecentMistakes(recent);
+  // Load user data when user changes
+  useEffect(() => {
+    if (user) {
+      const loadUserData = async () => {
+        await loadPerformanceData();
+        await loadWritingSubmissions();
+        await loadReadingData();
+        await loadListeningData();
+      };
+
+      loadUserData().catch(error => {
+        console.error('Failed to load user data:', error);
+      });
+    } else {
+      setPerformanceStats({
+        totalAnswered: 0, totalCorrect: 0, totalIncorrect: 0,
+        categoryBreakdown: [], weakestAreas: [], strongestAreas: []
+      });
+      setRecentMistakes([]);
+      setWritingSubmissions([]);
+      setCompletedPassageIds([]);
+      setReadingStats({ totalPassagesCompleted: 0, totalQuestionsAnswered: 0, totalCorrect: 0, averageScore: 0, passagesByDifficulty: {} as Record<string, number>, questionTypePerformance: {} as any });
+      setCompletedListeningTestIds([]);
+      setListeningStats({ totalTestsCompleted: 0, totalQuestionsAnswered: 0, totalCorrect: 0, averageScore: 0, testsBySection: {} as any, testsByDifficulty: {} as Record<string, number>, questionTypePerformance: {} as any });
+    }
+  }, [user]);
+
+  const loadPerformanceData = async () => {
+    if (!user) return;
+    try {
+      const stats = await getPerformanceStats();
+      const recent = await getRecentMistakes(7);
+      setPerformanceStats(stats);
+      setRecentMistakes(recent);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   // Load selected exam
@@ -233,7 +291,7 @@ function App() {
     const isCorrect = selectedAnswer === question.correctAnswer;
 
     // Update answer statistics
-    updateAnswerStats(isCorrect);
+    await updateAnswerStats(isCorrect);
 
     // Set initial answer state
     setUserAnswers(prev => {
@@ -244,7 +302,7 @@ function App() {
         isCorrect,
         isLoading: !isCorrect && openAIConfigured,
         explanation: !isCorrect && !openAIConfigured ?
-          'OpenAI API yapılandırılmamış. Açıklama almak için .env dosyasında VITE_OPENAI_API_KEY değerini ayarlayın.' :
+          'OpenAI sunucuda yapılandırılmamış. Açıklama almak için Render ortam değişkenlerine OPENAI_API_KEY ekleyin.' :
           undefined
       });
       return newAnswers;
@@ -256,7 +314,7 @@ function App() {
         const response = await getExplanation(question, selectedAnswer, question.correctAnswer);
 
         // Track the mistake with the grammar category
-        addMistakeRecord(
+        await addMistakeRecord(
           currentExam.id,
           questionId,
           question.questionText,
@@ -267,7 +325,7 @@ function App() {
         );
 
         // Reload performance data after tracking mistake
-        loadPerformanceData();
+        await loadPerformanceData();
 
         setUserAnswers(prev => {
           const newAnswers = new Map(prev);
@@ -291,7 +349,7 @@ function App() {
             newAnswers.set(questionId, {
               ...currentAnswer,
               isLoading: false,
-              explanation: 'Açıklama yüklenirken bir hata oluştu. Lütfen tekrar deneyin.'
+              explanation: 'AÃ§Ä±klama yÃ¼klenirken bir hata oluÅŸtu. LÃ¼tfen tekrar deneyin.'
             });
           }
           return newAnswers;
@@ -299,7 +357,7 @@ function App() {
       }
     } else if (!isCorrect && !openAIConfigured) {
       // Track mistake even without OpenAI, using 'other' as category
-      addMistakeRecord(
+      await addMistakeRecord(
         currentExam.id,
         questionId,
         question.questionText,
@@ -411,21 +469,26 @@ function App() {
     setUserAnswers(new Map());
   };
 
-  const handleClearTrackingData = () => {
-    if (confirm('Tüm performans verilerini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
-      clearTrackingData();
-      loadPerformanceData();
+  const handleClearTrackingData = async () => {
+    if (confirm('TÃ¼m performans verilerini silmek istediÄŸinizden emin misiniz? Bu iÅŸlem geri alÄ±namaz.')) {
+      await clearTrackingData();
+      await loadPerformanceData();
     }
   };
 
   const handleGetMistakesByCategory = (category: GrammarCategory): MistakeRecord[] => {
-    return getMistakesByCategory(category);
+    return recentMistakes.filter(m => m.grammarCategory === category);
   };
 
   // Writing Practice Functions
-  const loadWritingSubmissions = () => {
-    const submissions = getWritingSubmissions();
-    setWritingSubmissions(submissions);
+  const loadWritingSubmissions = async () => {
+    if (!user) return;
+    try {
+      const submissions = await getWritingSubmissions();
+      setWritingSubmissions(submissions);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleSubmitWriting = async (
@@ -437,10 +500,11 @@ function App() {
     const wordCount = text.trim().split(/\s+/).filter(w => w.length > 0).length;
 
     // Save submission first (without feedback)
-    const submissionId = saveWritingSubmission({
+    const submissionId = await saveWritingSubmission({
       promptId,
       promptTitle,
       originalText: text,
+      submittedAt: new Date(),
       wordCount
     });
 
@@ -454,35 +518,42 @@ function App() {
         const feedback = await getFullWritingFeedback(text, promptTitle);
 
         // Update submission with feedback
-        updateWritingSubmission(submissionId, { feedback });
+        await updateWritingSubmission(submissionId, { feedback });
 
         // Reload submissions
-        loadWritingSubmissions();
+        await loadWritingSubmissions();
 
         return feedback;
       } catch (error) {
         console.error('Failed to get writing feedback:', error);
-        loadWritingSubmissions();
+        await loadWritingSubmissions();
         return null;
       }
     } else {
-      loadWritingSubmissions();
+      await loadWritingSubmissions();
       return null;
     }
   };
 
-  const handleDeleteWritingSubmission = (submissionId: string) => {
-    deleteWritingSubmission(submissionId);
-    loadWritingSubmissions();
+  const handleDeleteWritingSubmission = async (submissionId: string) => {
+    await deleteWritingSubmission(submissionId);
+    await loadWritingSubmissions();
   };
 
   // Reading Comprehension Functions
-  const loadReadingData = () => {
-    setCompletedPassageIds(getCompletedPassageIds());
-    setReadingStats(getReadingStats());
+  const loadReadingData = async () => {
+    if (!user) return;
+    try {
+      const stats = await getReadingStats();
+      setReadingStats(stats);
+      const allProg = await getAllReadingProgress();
+      setCompletedPassageIds(allProg.filter(p => p.completedAt).map(p => p.passageId));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const handleAnswerReadingQuestion = (
+  const handleAnswerReadingQuestion = async (
     passageId: string,
     questionId: number,
     answer: string,
@@ -490,7 +561,7 @@ function App() {
     _questionType: string
   ) => {
     // Get or create progress for this passage
-    let progress = getReadingProgress(passageId);
+    let progress = await getReadingProgress(passageId);
 
     if (!progress) {
       progress = {
@@ -512,12 +583,12 @@ function App() {
     });
 
     progress.answers = answersMap;
-    saveReadingProgress(progress);
+    await saveReadingProgress(progress);
   };
 
-  const handleCompleteReadingPassage = (passageId: string, score: number, difficulty: string) => {
+  const handleCompleteReadingPassage = async (passageId: string, score: number, difficulty: string) => {
     // Update progress with completion
-    const progress = getReadingProgress(passageId);
+    const progress = await getReadingProgress(passageId);
     if (progress) {
       const answersMap = progress.answers instanceof Map
         ? progress.answers
@@ -540,7 +611,7 @@ function App() {
         });
       }
 
-      saveReadingProgress({
+      await saveReadingProgress({
         ...progress,
         answers: answersMap,
         completedAt: new Date(),
@@ -548,7 +619,7 @@ function App() {
       });
 
       // Update stats
-      updateReadingStats(
+      await updateReadingStats(
         true,
         difficulty,
         answersMap.size,
@@ -556,26 +627,31 @@ function App() {
         questionTypeResults
       );
 
-      loadReadingData();
+      await loadReadingData();
     }
   };
 
-  const handleGetReadingProgress = (passageId: string): ReadingProgress | null => {
-    return getReadingProgress(passageId);
+  const handleGetReadingProgress = async (passageId: string): Promise<ReadingProgress | null> => {
+    return await getReadingProgress(passageId);
   };
 
-  const handleResetReadingProgress = (passageId: string) => {
-    deleteReadingProgress(passageId);
-    loadReadingData();
+  const handleResetReadingProgress = async (passageId: string) => {
+    await deleteReadingProgress(passageId);
+    await loadReadingData();
   };
 
   // Listening Practice Functions
-  const loadListeningData = () => {
-    setCompletedListeningTestIds(getCompletedListeningTestIds());
-    setListeningStats(getListeningStats());
+  const loadListeningData = async () => {
+    if (!user) return;
+    try {
+      const stats = await getListeningStats();
+      setListeningStats(stats);
+      const allProg = await getAllListeningProgress();
+      setCompletedListeningTestIds(allProg.filter(p => p.completedAt).map(p => p.testId));
+    } catch (e) { console.error(e); }
   };
 
-  const handleAnswerListeningQuestion = (
+  const handleAnswerListeningQuestion = async (
     testId: string,
     questionId: number,
     answer: string,
@@ -583,7 +659,7 @@ function App() {
     _questionType: string
   ) => {
     // Get or create progress for this test
-    let progress = getListeningProgress(testId);
+    let progress = await getListeningProgress(testId);
 
     if (!progress) {
       progress = {
@@ -606,10 +682,10 @@ function App() {
     });
 
     progress.answers = answersMap;
-    saveListeningProgress(progress);
+    await saveListeningProgress(progress);
   };
 
-  const handleCompleteListeningTest = (
+  const handleCompleteListeningTest = async (
     testId: string,
     score: number,
     section: IELTSListeningSection,
@@ -617,13 +693,13 @@ function App() {
     questionTypeResults: Record<ListeningQuestionType, { correct: number; total: number }>
   ) => {
     // Update progress with completion
-    const progress = getListeningProgress(testId);
+    const progress = await getListeningProgress(testId);
     if (progress) {
       const answersMap = progress.answers instanceof Map
         ? progress.answers
         : new Map(Object.entries(progress.answers).map(([k, v]) => [parseInt(k), v]));
 
-      saveListeningProgress({
+      await saveListeningProgress({
         ...progress,
         answers: answersMap,
         completedAt: new Date(),
@@ -631,7 +707,7 @@ function App() {
       });
 
       // Update stats
-      updateListeningStats(
+      await updateListeningStats(
         section,
         difficulty,
         answersMap.size,
@@ -639,17 +715,17 @@ function App() {
         questionTypeResults
       );
 
-      loadListeningData();
+      await loadListeningData();
     }
   };
 
-  const handleGetListeningProgress = (testId: string): ListeningProgress | null => {
-    return getListeningProgress(testId);
+  const handleGetListeningProgress = async (testId: string): Promise<ListeningProgress | null> => {
+    return await getListeningProgress(testId);
   };
 
-  const handleResetListeningProgress = (testId: string) => {
-    deleteListeningProgress(testId);
-    loadListeningData();
+  const handleResetListeningProgress = async (testId: string) => {
+    await deleteListeningProgress(testId);
+    await loadListeningData();
   };
 
   const handleLoadSampleExam = async () => {
@@ -702,12 +778,12 @@ function App() {
       {/* Header */}
       <header className="app-header">
         <div className="header-left">
-          <div className="logo">
+          <div className="logo" onClick={() => { setSelectedExamId(null); setCurrentExam(null); }} style={{ cursor: 'pointer' }}>
             <BookOpen size={32} />
             <span>English Master</span>
           </div>
           {!useFirebase && (
-            <div className="local-mode-badge" title="Firebase yapılandırılmamış - Yerel depolama kullanılıyor">
+            <div className="local-mode-badge" title="Firebase yapÄ±landÄ±rÄ±lmamÄ±ÅŸ - Yerel depolama kullanÄ±lÄ±yor">
               <AlertCircle size={16} />
               <span>Yerel Mod</span>
             </div>
@@ -719,17 +795,14 @@ function App() {
           <button
             className="nav-item nav-exam"
             onClick={() => {
-              if (exams.length > 0) {
-                setSelectedExamId(exams[0].id);
-              } else {
-                handleLoadSampleExam();
-              }
+              setSelectedExamId(null);
+              setCurrentExam(null);
               setShowAdminPage(false);
             }}
-            title="Sınav Modu"
+            title="Ana Sayfa"
           >
             <BookOpen size={18} />
-            <span>Sınav</span>
+            <span>Ana Sayfa</span>
           </button>
 
           <button
@@ -753,16 +826,16 @@ function App() {
           <button
             className="nav-item nav-speaking"
             onClick={() => setShowSpeakingPractice(true)}
-            title="IELTS Konuşma Pratiği"
+            title="IELTS KonuÅŸma PratiÄŸi"
           >
             <Mic size={18} />
-            <span>Konuşma</span>
+            <span>KonuÅŸma</span>
           </button>
 
           <button
             className="nav-item nav-listening"
             onClick={() => setShowListeningPractice(true)}
-            title="IELTS Dinleme Pratiği"
+            title="IELTS Dinleme PratiÄŸi"
           >
             <Headphones size={18} />
             <span>Dinleme</span>
@@ -771,7 +844,7 @@ function App() {
           <button
             className="nav-item nav-writing"
             onClick={() => setShowWritingPractice(true)}
-            title="Yazma Pratiği"
+            title="Yazma PratiÄŸi"
           >
             <PenLine size={18} />
             <span>Yazma</span>
@@ -779,6 +852,33 @@ function App() {
         </nav>
 
         <div className="header-right">
+          {user ? (
+            <button
+              className="nav-item nav-logout"
+              onClick={logout}
+              title="Ã‡Ä±kÄ±ÅŸ Yap"
+              style={{ color: '#f87171' }}
+            >
+              <span>Ã‡Ä±kÄ±ÅŸ Yap ({user.email?.split('@')[0]})</span>
+            </button>
+          ) : (
+            <>
+              <button
+                className="nav-item nav-login"
+                onClick={() => { setAuthMode('login'); setShowAuthModal(true); }}
+              >
+                <span>GiriÅŸ Yap</span>
+              </button>
+              <button
+                className="nav-item nav-signup"
+                onClick={() => { setAuthMode('register'); setShowAuthModal(true); }}
+                style={{ background: 'rgba(167, 139, 250, 0.15)', color: '#c4b5fd', borderRadius: '8px' }}
+              >
+                <span>KayÄ±t Ol</span>
+              </button>
+            </>
+          )}
+
           <button
             className="performance-btn"
             onClick={() => setShowPerformanceTracker(true)}
@@ -796,7 +896,7 @@ function App() {
             onClick={() => setShowVocabVault(true)}
           >
             <BookOpen size={20} />
-            <span>Kelime Kasası</span>
+            <span>Kelime KasasÄ±</span>
             {vocabWords.length > 0 && (
               <span className="badge">{vocabWords.length}</span>
             )}
@@ -805,16 +905,16 @@ function App() {
           <button
             className="admin-btn"
             onClick={() => setShowAdminPage(true)}
-            title="Yönetim Paneli"
+            title="YÃ¶netim Paneli"
           >
             <Settings size={20} />
-            <span>Yönetim</span>
+            <span>YÃ¶netim</span>
           </button>
 
           <button
             className="theme-toggle"
             onClick={() => setIsDarkMode(!isDarkMode)}
-            title={isDarkMode ? 'Açık tema' : 'Koyu tema'}
+            title={isDarkMode ? 'AÃ§Ä±k tema' : 'Koyu tema'}
           >
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
@@ -834,55 +934,57 @@ function App() {
           />
         ) : (
           <>
-            {/* Sidebar with Exam Selector */}
-            <aside className="sidebar">
-              <ExamSelector
-                exams={exams}
-                selectedExamId={selectedExamId}
-                onSelectExam={setSelectedExamId}
-                onDeleteExam={handleDeleteExam}
-                isLoading={isLoadingExams}
-              />
+            {/* Sidebar with Exam Selector (Only shown during an exam) */}
+            {currentExam && (
+              <aside className="sidebar">
+                <ExamSelector
+                  exams={exams}
+                  selectedExamId={selectedExamId}
+                  onSelectExam={setSelectedExamId}
+                  onDeleteExam={handleDeleteExam}
+                  isLoading={isLoadingExams}
+                />
 
-              {/* Configuration Status */}
-              <div className="config-status">
-                <h3>Yapılandırma Durumu</h3>
-                <div className={`status-item ${useFirebase ? 'configured' : 'not-configured'}`}>
-                  <span className="status-dot"></span>
-                  <span>Firebase: {useFirebase ? 'Aktif' : 'Yerel Depolama'}</span>
+                {/* Configuration Status */}
+                <div className="config-status">
+                  <h3>YapÄ±landÄ±rma Durumu</h3>
+                  <div className={`status-item ${useFirebase ? 'configured' : 'not-configured'}`}>
+                    <span className="status-dot"></span>
+                    <span>Firebase: {useFirebase ? 'Aktif' : 'Yerel Depolama'}</span>
+                  </div>
+                  <div className={`status-item ${openAIConfigured ? 'configured' : 'not-configured'}`}>
+                    <span className="status-dot"></span>
+                    <span>OpenAI: {openAIConfigured ? 'Aktif' : 'YapÄ±landÄ±rÄ±lmamÄ±ÅŸ'}</span>
+                  </div>
                 </div>
-                <div className={`status-item ${openAIConfigured ? 'configured' : 'not-configured'}`}>
-                  <span className="status-dot"></span>
-                  <span>OpenAI: {openAIConfigured ? 'Aktif' : 'Yapılandırılmamış'}</span>
-                </div>
-              </div>
 
-              {/* Quick Stats */}
-              {currentExam && userAnswers.size > 0 && (
-                <div className="quick-stats">
-                  <h3>Hızlı İstatistik</h3>
-                  <div className="stat-row">
-                    <span>Cevaplanan:</span>
-                    <span>{userAnswers.size} / {currentExam.questions.length}</span>
+                {/* Quick Stats */}
+                {userAnswers.size > 0 && (
+                  <div className="quick-stats">
+                    <h3>HÄ±zlÄ± Ä°statistik</h3>
+                    <div className="stat-row">
+                      <span>Cevaplanan:</span>
+                      <span>{userAnswers.size} / {currentExam.questions.length}</span>
+                    </div>
+                    <div className="stat-row correct">
+                      <span>DoÄŸru:</span>
+                      <span>{Array.from(userAnswers.values()).filter(a => a.isCorrect).length}</span>
+                    </div>
+                    <div className="stat-row incorrect">
+                      <span>YanlÄ±ÅŸ:</span>
+                      <span>{Array.from(userAnswers.values()).filter(a => !a.isCorrect).length}</span>
+                    </div>
                   </div>
-                  <div className="stat-row correct">
-                    <span>Doğru:</span>
-                    <span>{Array.from(userAnswers.values()).filter(a => a.isCorrect).length}</span>
-                  </div>
-                  <div className="stat-row incorrect">
-                    <span>Yanlış:</span>
-                    <span>{Array.from(userAnswers.values()).filter(a => !a.isCorrect).length}</span>
-                  </div>
-                </div>
-              )}
-            </aside>
+                )}
+              </aside>
+            )}
 
             {/* Exam Content */}
-            <div className="content">
+            <div className={`content ${!currentExam ? 'full-width' : ''}`}>
               {isLoadingCurrentExam ? (
                 <div className="loading-state">
                   <div className="spinner-large"></div>
-                  <p>Sınav yükleniyor...</p>
+                  <p>SÄ±nav yÃ¼kleniyor...</p>
                 </div>
               ) : currentExam ? (
                 <ExamView
@@ -898,10 +1000,24 @@ function App() {
                   <div className="welcome-hero">
                     <div className="hero-glow"></div>
                     <BookOpen size={56} className="hero-icon" />
+                    <h1>Ä°ngilizce Ã–ÄŸrenme YolculuÄŸu</h1>
+                    <p>Beceri bazlÄ± pratik yap, kelime hazneni geliÅŸtir ve AI tabanlÄ± geri bildirimlerle performansÄ±nÄ± takip et.</p>
+                  </div>
+
+                  <div className="dashboard-controls">
+                    <div className="exam-selector-wrapper">
+                      <ExamSelector
+                        exams={exams}
+                        selectedExamId={selectedExamId}
+                        onSelectExam={setSelectedExamId}
+                        onDeleteExam={handleDeleteExam}
+                        isLoading={isLoadingExams}
+                      />
+                    </div>
                   </div>
 
                   <div className="skill-cards-grid">
-                    {/* Sınav Card */}
+                    {/* SÄ±nav Card */}
                     <button
                       className="skill-card skill-card-exam"
                       onClick={() => {
@@ -916,10 +1032,10 @@ function App() {
                         <BookOpen size={32} />
                       </div>
                       <div className="skill-card-content">
-                        <h3>Sınav</h3>
+                        <h3>SÄ±nav</h3>
                         <p>Gramer ve kelime bilgini test et</p>
                       </div>
-                      <div className="skill-card-arrow">→</div>
+                      <div className="skill-card-arrow">â†’</div>
                     </button>
 
                     {/* Gramer Card */}
@@ -933,9 +1049,9 @@ function App() {
                       </div>
                       <div className="skill-card-content">
                         <h3>Gramer</h3>
-                        <p>Dilbilgisi kurallarını öğren ve pratik yap</p>
+                        <p>Dilbilgisi kurallarÄ±nÄ± Ã¶ÄŸren ve pratik yap</p>
                       </div>
-                      <div className="skill-card-arrow">→</div>
+                      <div className="skill-card-arrow">â†’</div>
                     </button>
 
                     {/* Okuma Card */}
@@ -948,12 +1064,12 @@ function App() {
                       </div>
                       <div className="skill-card-content">
                         <h3>Okuma</h3>
-                        <p>Akademik metinleri anlama pratiği yap</p>
+                        <p>Akademik metinleri anlama pratiÄŸi yap</p>
                       </div>
-                      <div className="skill-card-arrow">→</div>
+                      <div className="skill-card-arrow">â†’</div>
                     </button>
 
-                    {/* Konuşma Card */}
+                    {/* KonuÅŸma Card */}
                     <button
                       className="skill-card skill-card-speaking"
                       onClick={() => setShowSpeakingPractice(true)}
@@ -962,10 +1078,10 @@ function App() {
                         <Mic size={32} />
                       </div>
                       <div className="skill-card-content">
-                        <h3>Konuşma</h3>
-                        <p>Speaking sınavına hazırlan</p>
+                        <h3>KonuÅŸma</h3>
+                        <p>Speaking sÄ±navÄ±na hazÄ±rlan</p>
                       </div>
-                      <div className="skill-card-arrow">→</div>
+                      <div className="skill-card-arrow">â†’</div>
                     </button>
 
                     {/* Dinleme Card */}
@@ -978,9 +1094,9 @@ function App() {
                       </div>
                       <div className="skill-card-content">
                         <h3>Dinleme</h3>
-                        <p>Listening bölümüne hazırlan</p>
+                        <p>Listening bÃ¶lÃ¼mÃ¼ne hazÄ±rlan</p>
                       </div>
-                      <div className="skill-card-arrow">→</div>
+                      <div className="skill-card-arrow">â†’</div>
                     </button>
 
                     {/* Yazma Card */}
@@ -993,9 +1109,9 @@ function App() {
                       </div>
                       <div className="skill-card-content">
                         <h3>Yazma</h3>
-                        <p>Essay ve task yazımını geliştir</p>
+                        <p>Essay ve task yazÄ±mÄ±nÄ± geliÅŸtir</p>
                       </div>
-                      <div className="skill-card-arrow">→</div>
+                      <div className="skill-card-arrow">â†’</div>
                     </button>
                   </div>
 
@@ -1007,7 +1123,7 @@ function App() {
                         onClick={() => setSelectedExamId(exams[0].id)}
                       >
                         <span className="btn-pulse"></span>
-                        İlk Sınavı Başlat
+                        SÄ±nava Devam Et
                       </button>
                     ) : (
                       <button
@@ -1015,12 +1131,18 @@ function App() {
                         onClick={handleLoadSampleExam}
                       >
                         <span className="btn-pulse"></span>
-                        120 Soruluk Örnek Sınavı Yükle
+                        120 Soruluk Ã–rnek SÄ±navÄ± YÃ¼kle
                       </button>
                     )}
                     <p className="quick-start-hint">
-                      veya üst menüden bir beceri seçin
+                      veya Ã¼st menÃ¼den bir beceri seÃ§in
                     </p>
+                  </div>
+
+                  {/* Floating Config Status */}
+                  <div className="floating-config-status">
+                    <div className={`status-dot ${useFirebase ? 'configured' : 'not-configured'}`} title={`Firebase: ${useFirebase ? 'Aktif' : 'Yerel'}`}></div>
+                    <div className={`status-dot ${openAIConfigured ? 'configured' : 'not-configured'}`} title={`OpenAI: ${openAIConfigured ? 'Aktif' : 'Pasif'}`}></div>
                   </div>
                 </div>
               )}
@@ -1034,6 +1156,13 @@ function App() {
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
         onImport={handleImportExam}
+      />
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        initialMode={authMode}
       />
 
       {/* Vocab Vault Panel */}
@@ -1111,3 +1240,9 @@ function App() {
 }
 
 export default App;
+
+
+
+
+
+

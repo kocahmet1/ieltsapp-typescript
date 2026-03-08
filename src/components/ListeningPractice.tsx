@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   X,
   Headphones,
@@ -12,14 +12,13 @@ import {
   BarChart3,
   Clock,
   Target,
-  Award,
   RefreshCw,
   List,
   Volume2,
   CheckCircle,
   FileText,
-  History,
-  BookPlus
+  BookPlus,
+  Award
 } from 'lucide-react';
 import {
   ListeningTest,
@@ -38,10 +37,10 @@ interface ListeningPracticeProps {
   tests: ListeningTest[];
   completedTestIds: string[];
   stats: ListeningStats;
-  onAnswerQuestion: (testId: string, questionId: number, answer: string, isCorrect: boolean, questionType: ListeningQuestionType) => void;
-  onCompleteTest: (testId: string, score: number, section: IELTSListeningSection, difficulty: string, questionTypeResults: Record<ListeningQuestionType, { correct: number; total: number }>) => void;
-  getProgress: (testId: string) => ListeningProgress | null;
-  onResetProgress: (testId: string) => void;
+  onAnswerQuestion: (testId: string, questionId: number, answer: string, isCorrect: boolean, questionType: ListeningQuestionType) => Promise<void>;
+  onCompleteTest: (testId: string, score: number, section: IELTSListeningSection, difficulty: string, questionTypeResults: Record<ListeningQuestionType, { correct: number; total: number }>) => Promise<void>;
+  getProgress: (testId: string) => Promise<ListeningProgress | null>;
+  onResetProgress: (testId: string) => Promise<void>;
   onAddToVault?: (word: string, questionContext: string, sourceId: string, questionId: number) => void;
   vocabWordsInVault?: string[];
 }
@@ -68,7 +67,7 @@ export const ListeningPractice = ({
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [filterSection, setFilterSection] = useState<IELTSListeningSection | 'all'>('all');
   const [filterDifficulty, setFilterDifficulty] = useState<string>('all');
-  
+
   // Audio state
   const [audioState, setAudioState] = useState<AudioState>('idle');
   const [audioProgress, setAudioProgress] = useState(0);
@@ -76,13 +75,13 @@ export const ListeningPractice = ({
   const [audioPlayCount, setAudioPlayCount] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
-  
+
   // Completion state for fill-in questions
   const [textInputs, setTextInputs] = useState<Map<number, string>>(new Map());
-  
+
   // Vocab vault state
   const [showVocabOptions, setShowVocabOptions] = useState<number | null>(null);
-  
+
   // Refs
   const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
   const audioIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -106,25 +105,40 @@ export const ListeningPractice = ({
 
   // Load existing progress when selecting a test
   useEffect(() => {
+    let isMounted = true;
     if (selectedTest) {
-      const progress = getProgress(selectedTest.id);
-      if (progress && progress.answers) {
-        if (progress.answers instanceof Map) {
-          setCurrentAnswers(new Map(progress.answers));
-        } else {
-          const answersMap = new Map<number, ListeningAnswer>();
-          Object.entries(progress.answers).forEach(([key, value]) => {
-            answersMap.set(parseInt(key), value as ListeningAnswer);
-          });
-          setCurrentAnswers(answersMap);
+      const load = async () => {
+        try {
+          const progress = await getProgress(selectedTest.id);
+          if (!isMounted) return;
+          if (progress && progress.answers) {
+            if (progress.answers instanceof Map) {
+              setCurrentAnswers(new Map(progress.answers));
+            } else {
+              const answersMap = new Map<number, ListeningAnswer>();
+              Object.entries(progress.answers).forEach(([key, value]) => {
+                answersMap.set(parseInt(key), value as ListeningAnswer);
+              });
+              setCurrentAnswers(answersMap);
+            }
+            setAudioPlayCount(progress.audioPlayCount || 0);
+          } else {
+            setCurrentAnswers(new Map());
+            setAudioPlayCount(0);
+          }
+          setTextInputs(new Map());
+        } catch (error) {
+          console.error("Failed to fetch listening progress", error);
+          if (isMounted) {
+            setCurrentAnswers(new Map());
+            setAudioPlayCount(0);
+            setTextInputs(new Map());
+          }
         }
-        setAudioPlayCount(progress.audioPlayCount || 0);
-      } else {
-        setCurrentAnswers(new Map());
-        setAudioPlayCount(0);
-      }
-      setTextInputs(new Map());
+      };
+      load();
     }
+    return () => { isMounted = false; };
   }, [selectedTest, getProgress]);
 
   // Cleanup on unmount
@@ -155,29 +169,29 @@ export const ListeningPractice = ({
   // Text-to-Speech functions
   const playAudio = useCallback(() => {
     if (!selectedTest) return;
-    
+
     // Cancel any existing speech
     window.speechSynthesis.cancel();
-    
+
     const utterance = new SpeechSynthesisUtterance(selectedTest.audioText);
     utterance.rate = 0.9; // Slightly slower for clarity
     utterance.pitch = 1;
     utterance.volume = 1;
-    
+
     // Try to use a British English voice for IELTS authenticity
     const voices = window.speechSynthesis.getVoices();
-    const britishVoice = voices.find(v => v.lang === 'en-GB') || 
-                         voices.find(v => v.lang.startsWith('en-'));
+    const britishVoice = voices.find(v => v.lang === 'en-GB') ||
+      voices.find(v => v.lang.startsWith('en-'));
     if (britishVoice) {
       utterance.voice = britishVoice;
     }
-    
+
     utterance.onstart = () => {
       setIsSpeaking(true);
       setAudioState('playing');
       startTimeRef.current = Date.now();
       setAudioPlayCount(prev => prev + 1);
-      
+
       // Update progress
       setAudioDuration(selectedTest.duration);
       audioIntervalRef.current = setInterval(() => {
@@ -185,7 +199,7 @@ export const ListeningPractice = ({
         setAudioProgress(Math.min(elapsed, selectedTest.duration));
       }, 100);
     };
-    
+
     utterance.onend = () => {
       setIsSpeaking(false);
       setAudioState('ended');
@@ -194,7 +208,7 @@ export const ListeningPractice = ({
       }
       setAudioProgress(selectedTest.duration);
     };
-    
+
     utterance.onerror = () => {
       setIsSpeaking(false);
       setAudioState('idle');
@@ -202,7 +216,7 @@ export const ListeningPractice = ({
         clearInterval(audioIntervalRef.current);
       }
     };
-    
+
     speechSynthRef.current = utterance;
     window.speechSynthesis.speak(utterance);
   }, [selectedTest]);
@@ -255,9 +269,9 @@ export const ListeningPractice = ({
     if (question.questionType === 'completion' || question.questionType === 'short_answer') {
       const normalizedAnswer = answer.trim().toLowerCase();
       const normalizedCorrect = question.correctAnswer.toLowerCase();
-      
+
       if (normalizedAnswer === normalizedCorrect) return true;
-      
+
       // Check acceptable answers
       if (question.acceptableAnswers) {
         return question.acceptableAnswers.some(
@@ -266,12 +280,12 @@ export const ListeningPractice = ({
       }
       return false;
     }
-    
+
     return answer === question.correctAnswer;
   };
 
   // Handle answering a question
-  const handleAnswer = (questionId: number, selectedAnswer: string) => {
+  const handleAnswer = async (questionId: number, selectedAnswer: string) => {
     if (!selectedTest) return;
     if (currentAnswers.has(questionId)) return; // Already answered
 
@@ -291,7 +305,7 @@ export const ListeningPractice = ({
     setCurrentAnswers(newAnswers);
 
     // Track the answer
-    onAnswerQuestion(
+    await onAnswerQuestion(
       selectedTest.id,
       questionId,
       selectedAnswer,
@@ -303,7 +317,7 @@ export const ListeningPractice = ({
     if (newAnswers.size === selectedTest.questions.length) {
       const correct = Array.from(newAnswers.values()).filter(a => a.isCorrect).length;
       const score = Math.round((correct / selectedTest.questions.length) * 100);
-      
+
       // Calculate question type results
       const questionTypeResults: Record<ListeningQuestionType, { correct: number; total: number }> = {} as Record<ListeningQuestionType, { correct: number; total: number }>;
       selectedTest.questions.forEach(q => {
@@ -316,8 +330,8 @@ export const ListeningPractice = ({
           questionTypeResults[q.questionType].correct += 1;
         }
       });
-      
-      onCompleteTest(selectedTest.id, score, selectedTest.section, selectedTest.difficulty, questionTypeResults);
+
+      await onCompleteTest(selectedTest.id, score, selectedTest.section, selectedTest.difficulty, questionTypeResults);
     }
   };
 
@@ -360,9 +374,9 @@ export const ListeningPractice = ({
   };
 
   // Handle reset test
-  const handleReset = () => {
+  const handleReset = async () => {
     if (selectedTest) {
-      onResetProgress(selectedTest.id);
+      await onResetProgress(selectedTest.id);
       setCurrentAnswers(new Map());
       setCurrentQuestionIndex(0);
       setAudioPlayCount(0);
@@ -410,13 +424,13 @@ export const ListeningPractice = ({
   // Extract vocabulary words from question text and options
   const extractVocabWords = (question: ListeningTest['questions'][0]): string[] => {
     const words: string[] = [];
-    
+
     // Extract from question text
     const questionWords = question.questionText.split(/[\s,;.!?()]+/)
       .filter(w => w.length > 4 && /^[a-zA-Z]+$/.test(w))
       .map(w => w.toLowerCase());
     words.push(...questionWords);
-    
+
     // Extract words from options if they exist
     if (question.options) {
       question.options.forEach(opt => {
@@ -426,7 +440,7 @@ export const ListeningPractice = ({
         words.push(...optionWords);
       });
     }
-    
+
     // Also include the correct answer if it's a text answer
     if (question.questionType === 'completion' || question.questionType === 'short_answer') {
       const answerWords = question.correctAnswer.split(/[\s,;.!?()]+/)
@@ -434,7 +448,7 @@ export const ListeningPractice = ({
         .map(w => w.toLowerCase());
       words.push(...answerWords);
     }
-    
+
     // Get unique words
     return [...new Set(words)].slice(0, 8);
   };
@@ -457,7 +471,7 @@ export const ListeningPractice = ({
         <div className="listening-header">
           <div className="listening-title">
             <Headphones size={24} />
-            <h2>Dinleme Pratiği</h2>
+            <h2>Dinleme PratiÄŸi</h2>
           </div>
           <div className="listening-header-actions">
             <button
@@ -472,7 +486,7 @@ export const ListeningPractice = ({
               onClick={() => setViewMode('stats')}
             >
               <BarChart3 size={18} />
-              <span>İstatistikler</span>
+              <span>Ä°statistikler</span>
             </button>
           </div>
           <button className="close-btn" onClick={onClose}>
@@ -488,13 +502,13 @@ export const ListeningPractice = ({
               {/* Section Filter */}
               <div className="filter-bar">
                 <div className="filter-group">
-                  <span className="filter-label">Bölüm:</span>
+                  <span className="filter-label">BÃ¶lÃ¼m:</span>
                   <div className="filter-buttons">
                     <button
                       className={`filter-btn ${filterSection === 'all' ? 'active' : ''}`}
                       onClick={() => setFilterSection('all')}
                     >
-                      Tümü
+                      TÃ¼mÃ¼
                     </button>
                     {(['section1', 'section2', 'section3', 'section4'] as IELTSListeningSection[]).map(sec => (
                       <button
@@ -515,7 +529,7 @@ export const ListeningPractice = ({
                       className={`filter-btn ${filterDifficulty === 'all' ? 'active' : ''}`}
                       onClick={() => setFilterDifficulty('all')}
                     >
-                      Tümü
+                      TÃ¼mÃ¼
                     </button>
                     {['easy', 'medium', 'hard'].map(diff => (
                       <button
@@ -535,9 +549,6 @@ export const ListeningPractice = ({
               <div className="test-grid">
                 {filteredTests.map(test => {
                   const isCompleted = completedTestIds.includes(test.id);
-                  const progress = getProgress(test.id);
-                  const hasProgress = progress && progress.answers && 
-                    (progress.answers instanceof Map ? progress.answers.size > 0 : Object.keys(progress.answers).length > 0);
 
                   return (
                     <div
@@ -575,39 +586,22 @@ export const ListeningPractice = ({
                           {test.questions.length} soru
                         </span>
                       </div>
-                      {progress?.score !== undefined && (
-                        <div className="test-card-score">
-                          <Award size={16} style={{ color: getScoreColor(progress.score) }} />
-                          <span style={{ color: getScoreColor(progress.score) }}>
-                            %{progress.score}
-                          </span>
-                        </div>
-                      )}
                       <button
                         className="start-btn"
                         onClick={() => handleStartTest(test)}
                       >
-                        {hasProgress ? (
-                          <>
-                            <History size={18} />
-                            <span>Devam Et</span>
-                          </>
-                        ) : (
-                          <>
-                            <Headphones size={18} />
-                            <span>Başla</span>
-                          </>
-                        )}
+                        <Headphones size={18} />
+                        <span>{isCompleted ? 'SonuÃ§lar / Devam' : 'BaÅŸla'}</span>
                       </button>
                     </div>
                   );
                 })}
               </div>
-              
+
               {filteredTests.length === 0 && (
                 <div className="empty-state-listening">
                   <Headphones size={48} />
-                  <p>Bu filtrelere uygun test bulunamadı.</p>
+                  <p>Bu filtrelere uygun test bulunamadÄ±.</p>
                 </div>
               )}
             </div>
@@ -655,10 +649,10 @@ export const ListeningPractice = ({
                     <RotateCcw size={20} />
                   </button>
                 </div>
-                
+
                 <div className="audio-progress-container">
                   <div className="audio-progress-bar">
-                    <div 
+                    <div
                       className="audio-progress-fill"
                       style={{ width: `${audioDuration ? (audioProgress / audioDuration) * 100 : 0}%` }}
                     />
@@ -670,7 +664,7 @@ export const ListeningPractice = ({
                   </div>
                 </div>
 
-                <button 
+                <button
                   className={`transcript-toggle ${showTranscript ? 'active' : ''}`}
                   onClick={() => setShowTranscript(!showTranscript)}
                 >
@@ -707,10 +701,10 @@ export const ListeningPractice = ({
               {/* Progress Bar */}
               <div className="listening-progress-bar">
                 <div className="progress-info">
-                  <span>{currentProgress.answered} / {currentProgress.total} soru cevaplandı</span>
+                  <span>{currentProgress.answered} / {currentProgress.total} soru cevaplandÄ±</span>
                   <span className="correct-count">
                     <Check size={14} />
-                    {currentProgress.correct} doğru
+                    {currentProgress.correct} doÄŸru
                   </span>
                 </div>
                 <div className="progress-track">
@@ -775,7 +769,7 @@ export const ListeningPractice = ({
                         <div className="input-group">
                           <input
                             type="text"
-                            placeholder="Cevabınızı yazın..."
+                            placeholder="CevabÄ±nÄ±zÄ± yazÄ±n..."
                             value={textInputs.get(currentQuestion.id) || ''}
                             onChange={(e) => {
                               const newInputs = new Map(textInputs);
@@ -788,24 +782,24 @@ export const ListeningPractice = ({
                               }
                             }}
                           />
-                          <button 
+                          <button
                             className="submit-btn"
                             onClick={() => handleTextSubmit(currentQuestion.id)}
                             disabled={!textInputs.get(currentQuestion.id)?.trim()}
                           >
                             <Check size={18} />
-                            Gönder
+                            GÃ¶nder
                           </button>
                         </div>
                       ) : (
                         <div className={`answer-result ${currentAnswers.get(currentQuestion.id)?.isCorrect ? 'correct' : 'incorrect'}`}>
                           <div className="your-answer">
-                            <span>Cevabınız:</span>
+                            <span>CevabÄ±nÄ±z:</span>
                             <strong>{currentAnswers.get(currentQuestion.id)?.selectedAnswer}</strong>
                           </div>
                           {!currentAnswers.get(currentQuestion.id)?.isCorrect && (
                             <div className="correct-answer">
-                              <span>Doğru cevap:</span>
+                              <span>DoÄŸru cevap:</span>
                               <strong>{currentQuestion.correctAnswer}</strong>
                             </div>
                           )}
@@ -821,12 +815,12 @@ export const ListeningPractice = ({
                         {currentAnswers.get(currentQuestion.id)?.isCorrect ? (
                           <>
                             <Check size={18} />
-                            <span>Doğru!</span>
+                            <span>DoÄŸru!</span>
                           </>
                         ) : (
                           <>
                             <AlertCircle size={18} />
-                            <span>Yanlış</span>
+                            <span>YanlÄ±ÅŸ</span>
                           </>
                         )}
                       </div>
@@ -835,53 +829,53 @@ export const ListeningPractice = ({
                   )}
 
                   {/* Vocab Vault Option - show for incorrect answers */}
-                  {currentAnswers.has(currentQuestion.id) && 
-                   !currentAnswers.get(currentQuestion.id)?.isCorrect && 
-                   onAddToVault && (
-                    <div className="vocab-section listening-vocab">
-                      <button 
-                        className="vocab-toggle"
-                        onClick={() => setShowVocabOptions(
-                          showVocabOptions === currentQuestion.id ? null : currentQuestion.id
+                  {currentAnswers.has(currentQuestion.id) &&
+                    !currentAnswers.get(currentQuestion.id)?.isCorrect &&
+                    onAddToVault && (
+                      <div className="vocab-section listening-vocab">
+                        <button
+                          className="vocab-toggle"
+                          onClick={() => setShowVocabOptions(
+                            showVocabOptions === currentQuestion.id ? null : currentQuestion.id
+                          )}
+                        >
+                          <BookPlus size={18} />
+                          <span>Kelime KasasÄ±na Ekle</span>
+                          {showVocabOptions === currentQuestion.id ? (
+                            <ChevronLeft size={16} style={{ transform: 'rotate(-90deg)' }} />
+                          ) : (
+                            <ChevronLeft size={16} style={{ transform: 'rotate(-90deg)', opacity: 0.5 }} />
+                          )}
+                        </button>
+
+                        {showVocabOptions === currentQuestion.id && (
+                          <div className="vocab-options">
+                            {extractVocabWords(currentQuestion).map(word => {
+                              const isInVault = vocabWordsInVault.includes(word.toLowerCase());
+                              return (
+                                <button
+                                  key={word}
+                                  className={`vocab-word-btn ${isInVault ? 'in-vault' : ''}`}
+                                  onClick={() => !isInVault && handleAddToVault(
+                                    word,
+                                    currentQuestion.questionText,
+                                    currentQuestion.id
+                                  )}
+                                  disabled={isInVault}
+                                >
+                                  <span>{word}</span>
+                                  {isInVault ? (
+                                    <Check size={14} />
+                                  ) : (
+                                    <BookPlus size={14} />
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
                         )}
-                      >
-                        <BookPlus size={18} />
-                        <span>Kelime Kasasına Ekle</span>
-                        {showVocabOptions === currentQuestion.id ? (
-                          <ChevronLeft size={16} style={{ transform: 'rotate(-90deg)' }} />
-                        ) : (
-                          <ChevronLeft size={16} style={{ transform: 'rotate(-90deg)', opacity: 0.5 }} />
-                        )}
-                      </button>
-                      
-                      {showVocabOptions === currentQuestion.id && (
-                        <div className="vocab-options">
-                          {extractVocabWords(currentQuestion).map(word => {
-                            const isInVault = vocabWordsInVault.includes(word.toLowerCase());
-                            return (
-                              <button
-                                key={word}
-                                className={`vocab-word-btn ${isInVault ? 'in-vault' : ''}`}
-                                onClick={() => !isInVault && handleAddToVault(
-                                  word, 
-                                  currentQuestion.questionText, 
-                                  currentQuestion.id
-                                )}
-                                disabled={isInVault}
-                              >
-                                <span>{word}</span>
-                                {isInVault ? (
-                                  <Check size={14} />
-                                ) : (
-                                  <BookPlus size={14} />
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                      </div>
+                    )}
                 </div>
 
                 {/* Question Navigation */}
@@ -892,7 +886,7 @@ export const ListeningPractice = ({
                     disabled={currentQuestionIndex === 0}
                   >
                     <ChevronLeft size={20} />
-                    <span>Önceki</span>
+                    <span>Ã–nceki</span>
                   </button>
 
                   <div className="question-dots">
@@ -902,7 +896,7 @@ export const ListeningPractice = ({
                       if (idx === currentQuestionIndex) dotClass += ' current';
                       if (answer?.isCorrect) dotClass += ' correct';
                       else if (answer) dotClass += ' incorrect';
-                      
+
                       return (
                         <button
                           key={q.id}
@@ -928,7 +922,7 @@ export const ListeningPractice = ({
                       onClick={handleViewResults}
                       disabled={currentProgress.answered < currentProgress.total}
                     >
-                      <span>Sonuçlar</span>
+                      <span>SonuÃ§lar</span>
                       <Award size={20} />
                     </button>
                   )}
@@ -942,7 +936,7 @@ export const ListeningPractice = ({
             <div className="results-view">
               <div className="results-header">
                 <h3>{selectedTest.title}</h3>
-                <p className="results-subtitle">Sonuçlarınız</p>
+                <p className="results-subtitle">SonuÃ§larÄ±nÄ±z</p>
               </div>
 
               {/* Score Display */}
@@ -957,17 +951,17 @@ export const ListeningPractice = ({
                     <span className="score-value" style={{ color: getScoreColor(Math.round((currentProgress.correct / currentProgress.total) * 100)) }}>
                       {Math.round((currentProgress.correct / currentProgress.total) * 100)}%
                     </span>
-                    <span className="score-label">Başarı</span>
+                    <span className="score-label">BaÅŸarÄ±</span>
                   </div>
                 </div>
                 <div className="score-details">
                   <div className="detail-item correct">
                     <Check size={20} />
-                    <span>{currentProgress.correct} Doğru</span>
+                    <span>{currentProgress.correct} DoÄŸru</span>
                   </div>
                   <div className="detail-item incorrect">
                     <X size={20} />
-                    <span>{currentProgress.total - currentProgress.correct} Yanlış</span>
+                    <span>{currentProgress.total - currentProgress.correct} YanlÄ±ÅŸ</span>
                   </div>
                   <div className="detail-item total">
                     <Target size={20} />
@@ -982,7 +976,7 @@ export const ListeningPractice = ({
 
               {/* Question Review */}
               <div className="question-review">
-                <h4>Soru Detayları</h4>
+                <h4>Soru DetaylarÄ±</h4>
                 {selectedTest.questions.map((question, idx) => {
                   const answer = currentAnswers.get(question.id);
                   return (
@@ -1005,10 +999,10 @@ export const ListeningPractice = ({
                       {!answer?.isCorrect && (
                         <div className="review-answer">
                           <span className="wrong-answer">
-                            Cevabınız: {answer?.selectedAnswer}
+                            CevabÄ±nÄ±z: {answer?.selectedAnswer}
                           </span>
                           <span className="correct-answer">
-                            Doğru: {question.correctAnswer}
+                            DoÄŸru: {question.correctAnswer}
                           </span>
                         </div>
                       )}
@@ -1053,7 +1047,7 @@ export const ListeningPractice = ({
                   <Check size={32} />
                   <div className="stat-info">
                     <span className="stat-value">{stats.totalCorrect}</span>
-                    <span className="stat-label">Doğru Cevap</span>
+                    <span className="stat-label">DoÄŸru Cevap</span>
                   </div>
                 </div>
                 <div className="stat-card">
@@ -1062,7 +1056,7 @@ export const ListeningPractice = ({
                     <span className="stat-value" style={{ color: getScoreColor(stats.averageScore) }}>
                       %{stats.averageScore}
                     </span>
-                    <span className="stat-label">Ortalama Başarı</span>
+                    <span className="stat-label">Ortalama BaÅŸarÄ±</span>
                   </div>
                 </div>
               </div>
@@ -1070,13 +1064,13 @@ export const ListeningPractice = ({
               {/* Section Performance */}
               {Object.values(stats.testsBySection).some(v => v > 0) && (
                 <div className="section-performance">
-                  <h4>Bölüm Performansı</h4>
+                  <h4>BÃ¶lÃ¼m PerformansÄ±</h4>
                   <div className="section-bars">
                     {(['section1', 'section2', 'section3', 'section4'] as IELTSListeningSection[]).map(section => {
                       const count = stats.testsBySection[section] || 0;
                       const total = Object.values(stats.testsBySection).reduce((a, b) => a + b, 0);
                       const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
-                      
+
                       return (
                         <div key={section} className="section-bar-item">
                           <div className="section-bar-info">
@@ -1086,9 +1080,9 @@ export const ListeningPractice = ({
                             <span>{count} test</span>
                           </div>
                           <div className="section-bar">
-                            <div 
+                            <div
                               className="section-bar-fill"
-                              style={{ 
+                              style={{
                                 width: `${percentage}%`,
                                 backgroundColor: getSectionColor(section)
                               }}
@@ -1104,7 +1098,7 @@ export const ListeningPractice = ({
               {/* Question Type Performance */}
               {Object.keys(stats.questionTypePerformance).length > 0 && (
                 <div className="type-performance">
-                  <h4>Soru Tipi Performansı</h4>
+                  <h4>Soru Tipi PerformansÄ±</h4>
                   <div className="type-list">
                     {Object.entries(stats.questionTypePerformance).map(([type, perf]) => {
                       const percentage = perf.total > 0 ? Math.round((perf.correct / perf.total) * 100) : 0;
@@ -1138,9 +1132,9 @@ export const ListeningPractice = ({
               {stats.totalTestsCompleted === 0 && (
                 <div className="empty-stats">
                   <Headphones size={48} />
-                  <p>Henüz test tamamlamadınız.</p>
+                  <p>HenÃ¼z test tamamlamadÄ±nÄ±z.</p>
                   <button onClick={() => setViewMode('list')}>
-                    Testlere Göz At
+                    Testlere GÃ¶z At
                   </button>
                 </div>
               )}
@@ -1151,4 +1145,6 @@ export const ListeningPractice = ({
     </div>
   );
 };
+
+
 

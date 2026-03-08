@@ -32,10 +32,10 @@ interface ReadingComprehensionProps {
   passages: ReadingPassage[];
   completedPassageIds: string[];
   stats: ReadingStats;
-  onAnswerQuestion: (passageId: string, questionId: number, answer: string, isCorrect: boolean, questionType: string) => void;
-  onCompletePassage: (passageId: string, score: number, difficulty: string) => void;
-  getProgress: (passageId: string) => ReadingProgress | null;
-  onResetProgress: (passageId: string) => void;
+  onAnswerQuestion: (passageId: string, questionId: number, answer: string, isCorrect: boolean, questionType: string) => Promise<void>;
+  onCompletePassage: (passageId: string, score: number, difficulty: string) => Promise<void>;
+  getProgress: (passageId: string) => Promise<ReadingProgress | null>;
+  onResetProgress: (passageId: string) => Promise<void>;
   onAddToVault?: (word: string, questionContext: string, sourceId: string, questionId: number) => void;
   vocabWordsInVault?: string[];
 }
@@ -75,22 +75,33 @@ export const ReadingComprehension = ({
 
   // Load existing progress when selecting a passage
   useEffect(() => {
+    let isMounted = true;
     if (selectedPassage) {
-      const progress = getProgress(selectedPassage.id);
-      if (progress && progress.answers) {
-        if (progress.answers instanceof Map) {
-          setCurrentAnswers(new Map(progress.answers));
-        } else {
-          const answersMap = new Map<number, ReadingAnswer>();
-          Object.entries(progress.answers).forEach(([key, value]) => {
-            answersMap.set(parseInt(key), value as ReadingAnswer);
-          });
-          setCurrentAnswers(answersMap);
+      const load = async () => {
+        try {
+          const progress = await getProgress(selectedPassage.id);
+          if (!isMounted) return;
+          if (progress && progress.answers) {
+            if (progress.answers instanceof Map) {
+              setCurrentAnswers(new Map(progress.answers));
+            } else {
+              const answersMap = new Map<number, ReadingAnswer>();
+              Object.entries(progress.answers).forEach(([key, value]) => {
+                answersMap.set(parseInt(key), value as ReadingAnswer);
+              });
+              setCurrentAnswers(answersMap);
+            }
+          } else {
+            setCurrentAnswers(new Map());
+          }
+        } catch (error) {
+          console.error("Failed to fetch progress", error);
+          if (isMounted) setCurrentAnswers(new Map());
         }
-      } else {
-        setCurrentAnswers(new Map());
-      }
+      };
+      load();
     }
+    return () => { isMounted = false; };
   }, [selectedPassage, getProgress]);
 
   // Filter passages by difficulty
@@ -125,7 +136,7 @@ export const ReadingComprehension = ({
   };
 
   // Handle answering a question
-  const handleAnswer = (questionId: number, selectedAnswer: string) => {
+  const handleAnswer = async (questionId: number, selectedAnswer: string) => {
     if (!selectedPassage) return;
     if (currentAnswers.has(questionId)) return; // Already answered
 
@@ -145,7 +156,7 @@ export const ReadingComprehension = ({
     setCurrentAnswers(newAnswers);
 
     // Track the answer
-    onAnswerQuestion(
+    await onAnswerQuestion(
       selectedPassage.id,
       questionId,
       selectedAnswer,
@@ -157,7 +168,7 @@ export const ReadingComprehension = ({
     if (newAnswers.size === selectedPassage.questions.length) {
       const correct = Array.from(newAnswers.values()).filter(a => a.isCorrect).length;
       const score = Math.round((correct / selectedPassage.questions.length) * 100);
-      onCompletePassage(selectedPassage.id, score, selectedPassage.difficulty);
+      await onCompletePassage(selectedPassage.id, score, selectedPassage.difficulty);
     }
   };
 
@@ -188,9 +199,9 @@ export const ReadingComprehension = ({
   };
 
   // Handle reset passage
-  const handleReset = () => {
+  const handleReset = async () => {
     if (selectedPassage) {
-      onResetProgress(selectedPassage.id);
+      await onResetProgress(selectedPassage.id);
       setCurrentAnswers(new Map());
       setCurrentQuestionIndex(0);
     }
@@ -303,9 +314,10 @@ export const ReadingComprehension = ({
               <div className="passage-grid">
                 {filteredPassages.map(passage => {
                   const isCompleted = completedPassageIds.includes(passage.id);
-                  const progress = getProgress(passage.id);
-                  const hasProgress = progress && progress.answers && 
-                    (progress.answers instanceof Map ? progress.answers.size > 0 : Object.keys(progress.answers).length > 0);
+                  // Since progress is async, we can't show it down here simultaneously without state.
+                  // For the passage list view, we already know if it's completed via completedPassageIds.
+                  // Since we don't have synchronous getProgress, we will omit the inline score card on the list view 
+                  // to save on infinite API calls, and instead rely on the completion badge.
 
                   return (
                     <div
@@ -342,29 +354,12 @@ export const ReadingComprehension = ({
                           {passage.questions.length} soru
                         </span>
                       </div>
-                      {progress?.score !== undefined && (
-                        <div className="passage-card-score">
-                          <Award size={16} style={{ color: getScoreColor(progress.score) }} />
-                          <span style={{ color: getScoreColor(progress.score) }}>
-                            %{progress.score}
-                          </span>
-                        </div>
-                      )}
                       <button
                         className="start-btn"
                         onClick={() => handleStartPassage(passage)}
                       >
-                        {hasProgress ? (
-                          <>
-                            <Eye size={18} />
-                            <span>Devam Et</span>
-                          </>
-                        ) : (
-                          <>
-                            <BookOpen size={18} />
-                            <span>Başla</span>
-                          </>
-                        )}
+                        <BookOpen size={18} />
+                        <span>{isCompleted ? 'Tekrar Çöz' : 'Başla'}</span>
                       </button>
                     </div>
                   );
@@ -493,53 +488,53 @@ export const ReadingComprehension = ({
                     )}
 
                     {/* Vocab Vault Option - show for incorrect answers */}
-                    {currentAnswers.has(currentQuestion.id) && 
-                     !currentAnswers.get(currentQuestion.id)?.isCorrect && 
-                     onAddToVault && (
-                      <div className="vocab-section reading-vocab">
-                        <button 
-                          className="vocab-toggle"
-                          onClick={() => setShowVocabOptions(
-                            showVocabOptions === currentQuestion.id ? null : currentQuestion.id
+                    {currentAnswers.has(currentQuestion.id) &&
+                      !currentAnswers.get(currentQuestion.id)?.isCorrect &&
+                      onAddToVault && (
+                        <div className="vocab-section reading-vocab">
+                          <button
+                            className="vocab-toggle"
+                            onClick={() => setShowVocabOptions(
+                              showVocabOptions === currentQuestion.id ? null : currentQuestion.id
+                            )}
+                          >
+                            <BookPlus size={18} />
+                            <span>Kelime Kasasına Ekle</span>
+                            {showVocabOptions === currentQuestion.id ? (
+                              <ChevronLeft size={16} style={{ transform: 'rotate(-90deg)' }} />
+                            ) : (
+                              <ChevronLeft size={16} style={{ transform: 'rotate(-90deg)', opacity: 0.5 }} />
+                            )}
+                          </button>
+
+                          {showVocabOptions === currentQuestion.id && (
+                            <div className="vocab-options">
+                              {extractVocabWords(currentQuestion).map(word => {
+                                const isInVault = vocabWordsInVault.includes(word.toLowerCase());
+                                return (
+                                  <button
+                                    key={word}
+                                    className={`vocab-word-btn ${isInVault ? 'in-vault' : ''}`}
+                                    onClick={() => !isInVault && handleAddToVault(
+                                      word,
+                                      currentQuestion.questionText,
+                                      currentQuestion.id
+                                    )}
+                                    disabled={isInVault}
+                                  >
+                                    <span>{word}</span>
+                                    {isInVault ? (
+                                      <Check size={14} />
+                                    ) : (
+                                      <BookPlus size={14} />
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           )}
-                        >
-                          <BookPlus size={18} />
-                          <span>Kelime Kasasına Ekle</span>
-                          {showVocabOptions === currentQuestion.id ? (
-                            <ChevronLeft size={16} style={{ transform: 'rotate(-90deg)' }} />
-                          ) : (
-                            <ChevronLeft size={16} style={{ transform: 'rotate(-90deg)', opacity: 0.5 }} />
-                          )}
-                        </button>
-                        
-                        {showVocabOptions === currentQuestion.id && (
-                          <div className="vocab-options">
-                            {extractVocabWords(currentQuestion).map(word => {
-                              const isInVault = vocabWordsInVault.includes(word.toLowerCase());
-                              return (
-                                <button
-                                  key={word}
-                                  className={`vocab-word-btn ${isInVault ? 'in-vault' : ''}`}
-                                  onClick={() => !isInVault && handleAddToVault(
-                                    word, 
-                                    currentQuestion.questionText, 
-                                    currentQuestion.id
-                                  )}
-                                  disabled={isInVault}
-                                >
-                                  <span>{word}</span>
-                                  {isInVault ? (
-                                    <Check size={14} />
-                                  ) : (
-                                    <BookPlus size={14} />
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                        </div>
+                      )}
                   </div>
 
                   {/* Question Navigation */}
@@ -560,7 +555,7 @@ export const ReadingComprehension = ({
                         if (idx === currentQuestionIndex) dotClass += ' current';
                         if (answer?.isCorrect) dotClass += ' correct';
                         else if (answer) dotClass += ' incorrect';
-                        
+
                         return (
                           <button
                             key={q.id}

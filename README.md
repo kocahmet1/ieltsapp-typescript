@@ -1,134 +1,102 @@
-# English Master - İngilizce Öğrenme Uygulaması
+﻿# English Master
 
-IELTS ve TOEFL sınavlarına hazırlık için tasarlanmış interaktif İngilizce öğrenme uygulaması.
+English learning app focused on IELTS and TOEFL practice. The app is built with React, TypeScript, Vite, and a small Node/Express server used for secure OpenAI API access in production.
 
-## Özellikler
+## What changed for deployment
 
-- **120 Soruluk Sınavlar**: Başlangıçtan ileri düzeye kadar kapsamlı İngilizce testleri
-- **Akıllı Açıklamalar**: Yanlış cevaplarda OpenAI destekli Türkçe açıklamalar
-- **Kelime Kasası**: Öğrenmek istediğiniz kelimeleri kaydedin
-- **Sınav İçe Aktarma**: Kendi sınavlarınızı ekleyin
-- **Koyu/Açık Tema**: Göz yormayan modern tasarım
-- **Yerel Depolama**: Firebase olmadan da çalışır
+- OpenAI calls now go through the server, so `OPENAI_API_KEY` is never exposed in the browser.
+- Render can run the whole app as one web service.
+- `render.yaml` is included for blueprint-based deployment.
+- `/api/health` and `/api/config` are available for Render and runtime checks.
 
-## Kurulum
+## Local setup
 
-### 1. Bağımlılıkları Yükleyin
+1. Install dependencies:
 
 ```bash
-cd english-learning-app
 npm install
 ```
 
-### 2. Ortam Değişkenlerini Ayarlayın
-
-`.env.example` dosyasını `.env` olarak kopyalayın:
+2. Copy the environment file:
 
 ```bash
 copy .env.example .env
 ```
 
-Ardından `.env` dosyasını düzenleyin:
+3. Set your variables in `.env`:
 
 ```env
-# Firebase Configuration (İsteğe bağlı - yoksa yerel depolama kullanılır)
-VITE_FIREBASE_API_KEY=your-api-key
+OPENAI_API_KEY=sk-your-openai-api-key
+PORT=3001
+VITE_FIREBASE_API_KEY=your-firebase-api-key
 VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=your-project-id
 VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
 VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
 VITE_FIREBASE_APP_ID=your-app-id
-
-# OpenAI Configuration (Açıklamalar için gerekli)
-VITE_OPENAI_API_KEY=sk-your-openai-api-key
 ```
 
-### 3. Uygulamayı Başlatın
+Notes:
+- `OPENAI_API_KEY` is server-only. Do not prefix it with `VITE_`.
+- Firebase config values are safe to expose to the client, but they still need to match your Firebase project.
+
+## Development
+
+Run client and server together:
 
 ```bash
 npm run dev
 ```
 
-Tarayıcınızda `http://localhost:5173` adresine gidin.
+- Vite runs on `http://localhost:5173`
+- The Express API runs on `http://localhost:3001`
+- Vite proxies `/api` to the local server
 
-## Firebase Kurulumu (İsteğe Bağlı)
+## Production build
 
-Firebase kullanmak isterseniz:
-
-1. [Firebase Console](https://console.firebase.google.com/) adresine gidin
-2. Yeni bir proje oluşturun
-3. Firestore Database'i etkinleştirin
-4. Project Settings > General > Your apps bölümünden web uygulaması ekleyin
-5. Yapılandırma bilgilerini `.env` dosyasına kopyalayın
-
-### Firestore Güvenlik Kuralları
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /exams/{examId} {
-      allow read, write: if true;
-    }
-    match /vocabVault/{wordId} {
-      allow read, write: if true;
-    }
-  }
-}
+```bash
+npm run build
+npm start
 ```
 
-## OpenAI API Kurulumu
+The server serves the built frontend from `dist/` and exposes the API under `/api`.
 
-Açıklama özelliği için OpenAI API anahtarı gereklidir:
+## GitHub prep
 
-1. [OpenAI Platform](https://platform.openai.com/) adresine gidin
-2. API Keys bölümünden yeni bir anahtar oluşturun
-3. Anahtarı `.env` dosyasına ekleyin
+Before pushing:
+- Confirm `.env` is not committed.
+- Commit `package-lock.json`, `render.yaml`, `server/`, and the frontend changes.
+- Push the repo to GitHub.
 
-## Sınav Formatı
+## Deploy to Render
 
-Yeni sınav eklerken aşağıdaki formatı kullanın:
+### Option 1: Blueprint deploy
 
-### Sorular:
-```
-1 Hello. My name _________ David.
-A am
-B is
-C are
+1. Push this repo to GitHub.
+2. In Render, choose `New +` -> `Blueprint`.
+3. Select the repository.
+4. Render will read [`render.yaml`](/C:/Users/Test1/english-learning-app/render.yaml).
+5. Fill in the environment variables, especially `OPENAI_API_KEY`.
 
-2 I _________ from Italy.
-A come
-B am
-C do
-```
+### Option 2: Manual web service
 
-### Cevap Anahtarı:
-```
-1. B
-2. B
-3. A
-```
+Use these settings:
 
-## Render.com'a Dağıtım
+- Runtime: `Node`
+- Build Command: `npm install && npm run build`
+- Start Command: `npm start`
+- Health Check Path: `/api/health`
 
-1. [Render.com](https://render.com) hesabı oluşturun
-2. GitHub reponuzu bağlayın
-3. "New Web Service" oluşturun
-4. Build Command: `npm install && npm run build`
-5. Publish Directory: `dist`
-6. Environment Variables bölümünden `.env` değişkenlerini ekleyin
+Set these environment variables in Render:
 
-## Teknolojiler
+- `OPENAI_API_KEY`
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`
 
-- React 18
-- TypeScript
-- Vite
-- Firebase Firestore
-- OpenAI API
-- Lucide Icons
+## Important security note
 
-## Lisans
-
-MIT
-
-
+Do not put `OPENAI_API_KEY` in frontend code or in any `VITE_*` variable. Vite variables are bundled into the client and become public.
