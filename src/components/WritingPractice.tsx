@@ -182,28 +182,28 @@ export const WritingPractice = ({
     return 'var(--accent-red)';
   };
 
+  // Meta underline color palette — cycles through these for visual distinction
+  const META_COLORS = ['#a371f7', '#2dd4bf', '#f97316', '#ec4899', '#3b82f6', '#eab308'];
+
   // Render highlighted text with errors - uses text matching for robustness
   const renderHighlightedText = (text: string, errors: GrammarError[]) => {
     if (!errors || errors.length === 0) {
       return <p className="original-text">{text}</p>;
     }
 
-    // Build a list of highlight regions by finding each error's text in the original
-    // Uses text matching instead of relying on LLM-provided indices which are often inaccurate
-    const regions: { start: number; end: number; error: GrammarError }[] = [];
+    // Find positions for each error via text matching
+    type Region = { start: number; end: number; error: GrammarError };
+    const allRegions: Region[] = [];
     const usedRanges: Set<string> = new Set();
 
     for (const error of errors) {
       if (!error.text || error.text.trim() === '') continue;
 
-      // Try to find the error text in the original, starting near the LLM's suggested position
       const searchText = error.text;
       let bestIndex = -1;
-
-      // First try: exact match near the suggested startIndex
       const suggestedStart = typeof error.startIndex === 'number' ? error.startIndex : 0;
 
-      // Search for all occurrences of the error text
+      // Search for all occurrences
       const occurrences: number[] = [];
       let searchFrom = 0;
       while (searchFrom < text.length) {
@@ -213,7 +213,7 @@ export const WritingPractice = ({
         searchFrom = idx + 1;
       }
 
-      // If no exact match, try case-insensitive
+      // Case-insensitive fallback
       if (occurrences.length === 0) {
         const lowerText = text.toLowerCase();
         const lowerSearch = searchText.toLowerCase();
@@ -227,7 +227,6 @@ export const WritingPractice = ({
       }
 
       if (occurrences.length > 0) {
-        // Pick the occurrence closest to the suggested startIndex that hasn't been used
         let minDist = Infinity;
         for (const occ of occurrences) {
           const rangeKey = `${occ}-${occ + searchText.length}`;
@@ -244,31 +243,57 @@ export const WritingPractice = ({
       if (bestIndex !== -1) {
         const rangeKey = `${bestIndex}-${bestIndex + searchText.length}`;
         usedRanges.add(rangeKey);
-        regions.push({
-          start: bestIndex,
-          end: bestIndex + searchText.length,
-          error
-        });
+        allRegions.push({ start: bestIndex, end: bestIndex + searchText.length, error });
       }
     }
 
-    // Sort regions by start position
-    regions.sort((a, b) => a.start - b.start);
+    // Separate surface and meta regions
+    const surfaceRegions = allRegions.filter(r => r.error.errorLevel === 'surface');
+    const metaRegions = allRegions.filter(r => r.error.errorLevel === 'meta');
 
-    // Remove overlapping regions (keep the first one)
-    const filtered: typeof regions = [];
-    for (const region of regions) {
-      const last = filtered[filtered.length - 1];
+    // Sort surface regions and remove same-level overlaps
+    surfaceRegions.sort((a, b) => a.start - b.start);
+    const filteredSurface: Region[] = [];
+    for (const region of surfaceRegions) {
+      const last = filteredSurface[filteredSurface.length - 1];
       if (!last || region.start >= last.end) {
-        filtered.push(region);
+        filteredSurface.push(region);
       }
     }
+
+    // For meta regions: split them around surface regions so they don't overlap
+    metaRegions.sort((a, b) => a.start - b.start);
+    const filteredMeta: Region[] = [];
+    for (const meta of metaRegions) {
+      // Check if any surface region overlaps this meta region
+      let hasOverlap = false;
+      for (const surface of filteredSurface) {
+        if (surface.start < meta.end && surface.end > meta.start) {
+          hasOverlap = true;
+          break;
+        }
+      }
+      if (!hasOverlap) {
+        // No overlap — keep as is
+        const last = filteredMeta[filteredMeta.length - 1];
+        if (!last || meta.start >= last.end) {
+          filteredMeta.push(meta);
+        }
+      }
+      // If overlaps with surface, skip it from rendering (it's still in the meta error cards)
+    }
+
+    // Merge all regions sorted by position
+    const allFiltered = [...filteredSurface, ...filteredMeta].sort((a, b) => a.start - b.start);
+
+    // Track meta color index for cycling
+    let metaColorIdx = 0;
 
     // Build highlighted elements
     const elements: React.JSX.Element[] = [];
     let lastIndex = 0;
 
-    filtered.forEach((region, idx) => {
+    allFiltered.forEach((region, idx) => {
       if (region.start > lastIndex) {
         elements.push(
           <span key={`text-${idx}`}>
@@ -277,20 +302,38 @@ export const WritingPractice = ({
         );
       }
 
-      const highlightClass = region.error.errorLevel === 'meta' ? 'error-highlight-meta' : 'error-highlight';
-      elements.push(
-        <span
-          key={`error-${idx}`}
-          className={highlightClass}
-          title={`${region.error.explanation}\nÖnerilen: ${region.error.suggestion}`}
-        >
-          {text.slice(region.start, region.end)}
-          <span className="error-tooltip">
-            <strong>{GRAMMAR_CATEGORY_LABELS[region.error.category]}</strong>
-            <span className="tooltip-suggestion">→ {region.error.suggestion}</span>
+      if (region.error.errorLevel === 'meta') {
+        const color = META_COLORS[metaColorIdx % META_COLORS.length];
+        metaColorIdx++;
+        elements.push(
+          <span
+            key={`error-${idx}`}
+            className="error-highlight-meta"
+            style={{ borderBottomColor: color }}
+            title={`${region.error.explanation}\nÖnerilen: ${region.error.suggestion}`}
+          >
+            {text.slice(region.start, region.end)}
+            <span className="error-tooltip" style={{ borderColor: color }}>
+              <strong>{GRAMMAR_CATEGORY_LABELS[region.error.category]}</strong>
+              <span className="tooltip-suggestion">→ {region.error.suggestion}</span>
+            </span>
           </span>
-        </span>
-      );
+        );
+      } else {
+        elements.push(
+          <span
+            key={`error-${idx}`}
+            className="error-highlight"
+            title={`${region.error.explanation}\nÖnerilen: ${region.error.suggestion}`}
+          >
+            {text.slice(region.start, region.end)}
+            <span className="error-tooltip">
+              <strong>{GRAMMAR_CATEGORY_LABELS[region.error.category]}</strong>
+              <span className="tooltip-suggestion">→ {region.error.suggestion}</span>
+            </span>
+          </span>
+        );
+      }
 
       lastIndex = region.end;
     });
@@ -621,18 +664,28 @@ export const WritingPractice = ({
                 <div className="text-analysis">
                   <h3>
                     <FileText size={20} />
-                    Metin Analizi
+                    Yazım ve Dilbilgisi
                     {currentFeedback.errors.filter(e => e.errorLevel === 'surface').length > 0 && (
                       <span className="error-count">{currentFeedback.errors.filter(e => e.errorLevel === 'surface').length} hata bulundu</span>
                     )}
-                    {currentFeedback.errors.filter(e => e.errorLevel === 'meta').length > 0 && (
-                      <span className="meta-error-count">{currentFeedback.errors.filter(e => e.errorLevel === 'meta').length} stil hatası</span>
-                    )}
                   </h3>
                   <div className="text-box original">
-                    {renderHighlightedText(writingText, currentFeedback.errors)}
+                    {renderHighlightedText(writingText, currentFeedback.errors.filter(e => e.errorLevel === 'surface'))}
                   </div>
                 </div>
+
+                {currentFeedback.errors.filter(e => e.errorLevel === 'meta').length > 0 && (
+                  <div className="text-analysis">
+                    <h3>
+                      <Sparkles size={20} />
+                      Stil ve Doğallık
+                      <span className="meta-error-count">{currentFeedback.errors.filter(e => e.errorLevel === 'meta').length} stil hatası</span>
+                    </h3>
+                    <div className="text-box original">
+                      {renderHighlightedText(writingText, currentFeedback.errors.filter(e => e.errorLevel === 'meta'))}
+                    </div>
+                  </div>
+                )}
 
                 {currentFeedback.errors.filter(e => e.errorLevel === 'surface').length > 0 && (
                   <div className="error-list">
