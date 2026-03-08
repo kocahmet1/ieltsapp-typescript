@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "Node",
+    "lib": ["DOM", "ES2022"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "outDir": "build/client",
+    "rootDir": "client",
+    "skipLibCheck": true
+  },
+  "include": ["client/main.ts"]
+}

@@ -1,0 +1,79 @@
+{
+  "passage": "The Resurgence of Urban Farming: Cultivating Sustainable Cities\n\nUrban farming, the practice of cultivating, processing, and distributing food in or around urban areas, is experiencing a global resurgence. While often perceived as a modern trend, its roots stretch back millennia, intertwined with the very genesis of cities. Ancient civilizations in Mesopotamia, Egypt, and the Americas integrated food production within their urban fabric, recognizing the vital link between proximity to food sources and societal stability. Historical records indicate that the Hanging Gardens of Babylon, though often romanticized, likely served a practical purpose beyond aesthetics, potentially contributing to the city's food supply. During wartime, particularly the two World Wars, 'Victory Gardens' in North America and Europe demonstrated urban areas' capacity to bolster national food security, transforming parks, backyards, and vacant lots into productive agricultural spaces. This historical context underscores urban farming's enduring relevance as a strategy for resilience.\n\nThe decline of urban farming in the mid-20th century was largely driven by the rise of industrial agriculture, cheap transportation, and suburbanization, which shifted food production to large-scale rural operations. However, contemporary challenges such as climate change, food insecurity, escalating energy costs, and a growing awareness of environmental degradation have propelled urban farming back into the spotlight. Modern urban agriculture encompasses a diverse array of practices, from traditional community gardens and backyard plots to high-tech vertical farms, rooftop greenhouses, and aquaponics systems. These innovations are not merely about food production; they are integral to broader urban sustainability agendas, offering multifaceted benefits that extend beyond the plate.\n\nOne of the primary advantages of urban farming is its potential to enhance food security and access, particularly for underserved communities. By reducing the distance food travels from farm to fork, urban farms minimize transportation costs and carbon emissions, while simultaneously providing fresh, nutritious produce to local residents, often at lower prices or through direct distribution models. This localized food system can be particularly impactful in 'food deserts'—areas characterized by limited access to affordable, healthy food options. Moreover, community gardens foster social cohesion, creating spaces for intergenerational interaction, skill-sharing, and community building, thereby strengthening social capital within neighborhoods.\n\nBeyond food provision, urban farming contributes significantly to ecological sustainability. Green spaces, whether community gardens or vertical farms, mitigate the urban heat island effect by absorbing sunlight and releasing moisture, thus lowering ambient temperatures. They also improve air quality by filtering pollutants and sequestering carbon dioxide. Rainwater harvesting systems integrated into urban farms reduce stormwater runoff, lessening the burden on municipal drainage systems and preventing localized flooding. Furthermore, urban farms can transform neglected or contaminated brownfield sites into productive landscapes, revitalizing derelict areas and enhancing urban biodiversity by providing habitats for pollinators and other beneficial insects. The composting of organic waste from households and restaurants within urban farms also diverts waste from landfills, reducing methane emissions and creating nutrient-rich soil amendments.\n\nDespite its undeniable benefits, urban farming faces several significant challenges. Land availability and cost are paramount concerns in densely populated urban environments. Securing suitable plots, especially for larger-scale operations, often involves navigating complex zoning regulations and competing with high-value commercial or residential development. Soil contamination, a legacy of industrial activity, is another hurdle, necessitating extensive remediation or the adoption of raised beds and hydroponic systems. Water access and quality can also be an issue, particularly in regions prone to drought. Furthermore, the economic viability of urban farms can be precarious. Many operate on thin margins, relying on volunteer labor, grants, or direct-to-consumer sales to remain solvent. Scaling up production to meet significant portions of a city's food demand requires substantial investment in infrastructure, technology, and skilled labor, often challenging the romanticized image of small, idyllic community gardens.\n\nLooking to the future, technological advancements are poised to revolutionize urban farming. Vertical farms, utilizing controlled environments, LED lighting, and hydroponic or aeroponic systems, can produce crops year-round with minimal land and water requirements, often yielding significantly higher outputs per square foot than traditional field agriculture. Integrating artificial intelligence and sensor technology can optimize growing conditions, reduce resource consumption, and predict harvests with greater accuracy. Policy support is also crucial. Progressive urban planning, incentives for brownfield redevelopment, streamlined permitting processes, and educational programs can foster a more conducive environment for urban agriculture to thrive. The integration of urban farming into city master plans, recognizing it not just as a niche activity but as a fundamental component of resilient urban infrastructure, will be key to unlocking its full potential. As cities continue to expand and face intensifying environmental and social pressures, urban farming offers a compelling vision for a more sustainable, equitable, and food-secure future. It represents a powerful paradigm shift, moving from a city that merely consumes to a city that actively cultivates.",
+  "questions": [
+    {
+      "id": 1,
+      "question_type": "FITB",
+      "question": "Early urban societies understood the crucial connection between easy access to food and the overall _________ of their communities.",
+      "answer": "societal stability",
+      "source_sentence": "Ancient civilizations in Mesopotamia, Egypt, and the Americas integrated food production within their urban fabric, recognizing the vital link between proximity to food sources and societal stability."
+    },
+    {
+      "id": 2,
+      "question_type": "FITB",
+      "question": "The mid-20th century saw a decrease in urban farming primarily due to the emergence of industrial agriculture, inexpensive transport, and the trend towards _________.",
+      "answer": "suburbanization",
+      "source_sentence": "The decline of urban farming in the mid-20th century was largely driven by the rise of industrial agriculture, cheap transportation, and suburbanization, which shifted food production to large-scale rural operations."
+    },
+    {
+      "id": 3,
+      "question_type": "FITB",
+      "question": "A significant benefit of urban farming is its capacity to improve food security and availability, especially for _________ populations.",
+      "answer": "underserved communities",
+      "source_sentence": "One of the primary advantages of urban farming is its potential to enhance food security and access, particularly for underserved communities."
+    },
+    {
+      "id": 4,
+      "question_type": "FITB",
+      "question": "Urban green spaces help reduce the urban heat island effect by absorbing sunlight and releasing moisture, which in turn decreases _________.",
+      "answer": "ambient temperatures",
+      "source_sentence": "Green spaces, whether community gardens or vertical farms, mitigate the urban heat island effect by absorbing sunlight and releasing moisture, thus lowering ambient temperatures."
+    },
+    {
+      "id": 5,
+      "question_type": "FITB",
+      "question": "In crowded urban settings, the two most critical issues for urban farming are the availability and _________ of land.",
+      "answer": "cost",
+      "source_sentence": "Land availability and cost are paramount concerns in densely populated urban environments."
+    },
+    {
+      "id": 6,
+      "question_type": "TFNG",
+      "statement": "The Hanging Gardens of Babylon were primarily built for aesthetic pleasure rather than food production.",
+      "answer": "False",
+      "relevant_passage": "Historical records indicate that the Hanging Gardens of Babylon, though often romanticized, likely served a practical purpose beyond aesthetics, potentially contributing to the city's food supply."
+    },
+    {
+      "id": 7,
+      "question_type": "TFNG",
+      "statement": "Urban farms help to reduce the 'food desert' phenomenon by making healthy food more accessible in specific areas.",
+      "answer": "True",
+      "relevant_passage": "This localized food system can be particularly impactful in 'food deserts'—areas characterized by limited access to affordable, healthy food options."
+    },
+    {
+      "id": 8,
+      "question_type": "TFNG",
+      "statement": "Urban farming consistently generates higher profits compared to traditional rural agriculture.",
+      "answer": "Not Given",
+      "relevant_passage": "Furthermore, the economic viability of urban farms can be precarious. Many operate on thin margins, relying on volunteer labor, grants, or direct-to-consumer sales to remain solvent."
+    },
+    {
+      "id": 9,
+      "question_type": "TFNG",
+      "statement": "Composting organic waste on urban farms helps to diminish methane emissions.",
+      "answer": "True",
+      "relevant_passage": "The composting of organic waste from households and restaurants within urban farms also diverts waste from landfills, reducing methane emissions and creating nutrient-rich soil amendments."
+    },
+    {
+      "id": 10,
+      "question_type": "TFNG",
+      "statement": "Artificial intelligence and sensor technology are expected to play a minor role in the future development of urban farming.",
+      "answer": "False",
+      "relevant_passage": "Integrating artificial intelligence and sensor technology can optimize growing conditions, reduce resource consumption, and predict harvests with greater accuracy."
+    }
+  ],
+  "question_type": "mixed_fitb_tfng",
+  "id": "b3b765f6-006b-4988-8e2d-0ab0b0c1cdbb",
+  "created_at": "2026-03-08T05:20:11.659Z",
+  "shareUrl": "http://localhost:5080/?id=b3b765f6-006b-4988-8e2d-0ab0b0c1cdbb"
+}

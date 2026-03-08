@@ -1,0 +1,9 @@
+{
+    "name":  "ieltsapp-typescript",
+    "private":  true,
+    "scripts":  {
+                    "dev":  "npm run build \u0026\u0026 npm run start",
+                    "build":  "node ../node_modules/typescript/bin/tsc -p tsconfig.client.json \u0026\u0026 node ../node_modules/typescript/bin/tsc -p tsconfig.server.json",
+                    "start":  "node build/server/server.js"
+                }
+}

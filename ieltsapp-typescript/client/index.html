@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Veritas IELTS Practice</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>Veritas IELTS Practice</h1>
+      <p class="subtitle">TypeScript rewrite of the IELTS reading practice workflow</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <nav id="authNav" style="margin-bottom: 1.5rem; padding: 1rem; background-color: #e9ecef; border-radius: 8px; text-align: right;">
+      <span id="currentUserDisplay" style="display:none; margin-right: 15px; font-weight: 600;"></span>
+      <button id="loginNavBtn" class="btn auth-nav-btn">Login</button>
+      <button id="registerNavBtn" class="btn auth-nav-btn">Register</button>
+      <button id="progressNavBtn" class="btn auth-nav-btn" style="display:none;">My Progress</button>
+      <button id="logoutNavBtn" class="btn auth-nav-btn" style="display:none;">Logout</button>
+    </nav>
+
+    <section id="registrationSection" class="auth-section" style="display:none; margin-bottom: 2rem; padding: 1.5rem; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+      <h2>Register</h2>
+      <form id="registerForm">
+        <div style="margin-bottom: 1rem;">
+          <label for="registerUsername" style="display: block; margin-bottom: 0.5rem;">Username</label>
+          <input type="text" id="registerUsername" name="username" required style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;" />
+        </div>
+        <div style="margin-bottom: 1rem;">
+          <label for="registerPassword" style="display: block; margin-bottom: 0.5rem;">Password</label>
+          <input type="password" id="registerPassword" name="password" required style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;" />
+        </div>
+        <button type="submit" class="btn primary">Register</button>
+      </form>
+      <div id="registerMessage" class="auth-message" style="margin-top: 1rem; font-weight: 500;"></div>
+    </section>
+
+    <section id="loginSection" class="auth-section" style="display:none; margin-bottom: 2rem; padding: 1.5rem; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+      <h2>Login</h2>
+      <form id="loginForm">
+        <div style="margin-bottom: 1rem;">
+          <label for="loginUsername" style="display: block; margin-bottom: 0.5rem;">Username</label>
+          <input type="text" id="loginUsername" name="username" required style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;" />
+        </div>
+        <div style="margin-bottom: 1rem;">
+          <label for="loginPassword" style="display: block; margin-bottom: 0.5rem;">Password</label>
+          <input type="password" id="loginPassword" name="password" required style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;" />
+        </div>
+        <button type="submit" class="btn primary">Login</button>
+      </form>
+      <div id="loginMessage" class="auth-message" style="margin-top: 1rem; font-weight: 500;"></div>
+    </section>
+
+    <section id="progressSection" class="auth-section" style="display:none; margin-bottom: 2rem; padding: 1.5rem; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+      <h2>My Progress</h2>
+      <table id="progressTable" class="table" style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+        <thead>
+          <tr>
+            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; background-color: #f2f2f2;">Date Attempted</th>
+            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; background-color: #f2f2f2;">Practice Set ID</th>
+            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; background-color: #f2f2f2;">FITB Score</th>
+            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; background-color: #f2f2f2;">TFNG Score</th>
+            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; background-color: #f2f2f2;">MH Score</th>
+          </tr>
+        </thead>
+        <tbody id="progressTableBody"></tbody>
+      </table>
+      <p id="noProgressMessage" style="display:none; margin-top: 1rem; font-style: italic;">You have no saved progress yet.</p>
+    </section>
+
+    <section class="controls">
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+        <button id="generateBtn" class="btn primary">Generate New Practice Set</button>
+        <label style="display:flex; gap:0.5rem; align-items:center; font-weight:600;">
+          Mode
+          <select id="generateModeSelect" class="btn" style="padding:0.6rem 0.8rem;">
+            <option value="matching_headings">Matching Headings</option>
+            <option value="mixed_fitb_tfng">FITB + TFNG</option>
+          </select>
+        </label>
+        <button id="apiKeyToggleBtn" class="btn">API Key Settings</button>
+      </div>
+      <div id="loading" class="loading-indicator hidden">
+        <div class="spinner"></div>
+        <p>Generating practice set...</p>
+      </div>
+      <div id="apiKeySection" class="api-key-section hidden">
+        <div class="api-key-container">
+          <p>Enter your Gemini API key to use your own quota. The server will use its default key if available.</p>
+          <div class="api-key-input-container">
+            <input type="password" id="apiKeyInput" placeholder="Enter your Gemini API key" class="api-key-input" />
+            <button id="saveApiKeyBtn" class="btn secondary">Save Key</button>
+          </div>
+          <p id="apiKeyStatus" class="api-key-status">No custom API key saved.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="practice-area hidden" id="practiceArea">
+      <div id="shareUrlContainer"></div>
+      <div class="practice-container">
+        <div class="passage-container">
+          <h2>Reading Passage</h2>
+          <div id="passage" class="passage"></div>
+        </div>
+
+        <div class="questions-container">
+          <div class="tabs">
+            <button id="fitbTab" class="tab-button">Fill in the Blanks</button>
+            <button id="tfngTab" class="tab-button">True / False / Not Given</button>
+            <button id="mhTab" class="tab-button">Matching Headings</button>
+          </div>
+
+          <div id="fitbQuestions" class="question-tab">
+            <h2>Fill-in-the-blank Questions</h2>
+            <div id="fitbSummary" class="answer-result hidden"></div>
+            <div id="questions" class="questions"></div>
+          </div>
+
+          <div id="tfngQuestions" class="question-tab">
+            <h2>True / False / Not Given Questions</h2>
+            <div id="tfngSummary" class="answer-result hidden"></div>
+            <div id="tfngQuestionsContainer" class="questions"></div>
+          </div>
+
+          <div id="mhQuestions" class="question-tab">
+            <h2>Matching Headings</h2>
+            <div class="questions">
+              <div id="mhHeadingsList" class="mh-headings-list"></div>
+              <div id="mhQuestionArea" class="mh-question-area"></div>
+              <button id="mhCheckAnswersBtn" class="btn">Check Matching Headings Answers</button>
+              <div id="mhResults" class="mh-results answer-result hidden"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="translation-modal" id="translationModal">
+      <div class="translation-content">
+        <span id="translatedWord"></span>
+        <button id="closeTranslation" class="close-btn" type="button">&times;</button>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>Veritas IELTS Practice App &copy; 2026</p>
+    </div>
+  </footer>
+
+  <script type="module" src="/main.js"></script>
+</body>
+</html>

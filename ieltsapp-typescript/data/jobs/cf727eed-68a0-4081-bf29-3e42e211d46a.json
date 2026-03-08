@@ -1,0 +1,7 @@
+{
+  "id": "cf727eed-68a0-4081-bf29-3e42e211d46a",
+  "status": "failed",
+  "created_at": "2026-03-08T05:17:07.594Z",
+  "practice_set_id": null,
+  "error": "Gemini request failed with 404: {\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"models/gemini-2.5-flash-preview-05-20 is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.\",\n    \"status\": \"NOT_FOUND\"\n  }\n}\n"
+}

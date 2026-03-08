@@ -1,0 +1,61 @@
+{
+  "passage": "The concept of \"urban rewilding\" represents a significant evolution in metropolitan environmental planning, moving beyond conventional landscaping and manicured parks towards fostering self-sustaining, wilder ecosystems within cities. Unlike traditional urban greening, which often prioritises aesthetic control and human convenience, rewilding initiatives aim to restore natural processes, enhance biodiversity, and create spaces where nature can thrive with minimal human intervention. This approach is gaining increasing traction globally as cities grapple with the dual challenges of rapid biodiversity loss and the escalating impacts of climate change. Proponents argue that by allowing natural systems to reclaim parts of the urban fabric, cities can not only become more resilient and ecologically diverse but also offer profound benefits for human well-being, reconnecting residents with wilderness and natural cycles. It signifies a paradigm shift from merely 'adding' greenery to 'integrating' wild nature.\n\nPractical applications of urban rewilding encompass a diverse range of strategies tailored to specific urban contexts. A common technique involves the reintroduction of native plant species and the removal of non-native, often ornamental, flora, thereby supporting local insect and animal populations. Creating 'green corridors' or 'eco-links' is another vital component, connecting fragmented natural spaces like parks, riversides, and derelict land, allowing for the movement of wildlife and the dispersal of seeds. De-paving initiatives, where concrete and asphalt surfaces are removed to expose soil and allow for natural vegetation growth, transform impermeable surfaces into permeable, biodiverse habitats. Furthermore, natural water management systems, such as rain gardens and constructed wetlands, mimic natural hydrological processes, mitigating flood risks while providing new habitats. Examples range from small community-led projects transforming vacant lots into wildflower meadows to large-scale municipal programmes reforesting former industrial sites or revitalising urban rivers.\n\nDespite its ecological promise, urban rewilding faces several substantial challenges and criticisms. One primary hurdle is public perception; many urban residents are accustomed to highly managed green spaces and may view rewilded areas as untidy, neglected, or even unsafe. Concerns about increased pest populations (e.g., rodents, insects) or the potential for certain plant species to exacerbate allergies are also common. Economically, while rewilding can reduce long-term maintenance costs associated with traditional landscaping, initial investment in habitat restoration, native species procurement, and community engagement can be significant. Ecologically, there are complexities in managing the reintroduction of species, ensuring genetic diversity, and preventing the spread of invasive species that might outcompete native flora and fauna. Balancing human recreational needs with the imperative to protect sensitive ecosystems also requires careful planning and robust policy frameworks, often leading to conflicts over land use.\n\nLooking ahead, the future of urban rewilding appears increasingly integrated into broader urban development strategies, moving beyond isolated projects to become a fundamental aspect of resilient city planning. Success hinges on robust policy support, cross-sector collaboration, and sustained community engagement. Educational initiatives are crucial for shifting public attitudes, helping residents understand the ecological value of wilder spaces and fostering a sense of stewardship. Citizen science programmes, where residents monitor biodiversity or participate in planting efforts, can deepen this connection. The long-term benefits extend far beyond biodiversity conservation, contributing significantly to climate change adaptation through enhanced carbon sequestration, reduced urban heat island effects, and improved stormwater management. Ultimately, urban rewilding offers a transformative vision for cities, envisioning them not merely as human habitats but as vibrant, interconnected ecosystems where both people and nature can flourish in a mutually beneficial relationship.",
+  "paragraphs": [
+    {
+      "id": "A",
+      "content": "The concept of \"urban rewilding\" represents a significant evolution in metropolitan environmental planning, moving beyond conventional landscaping and manicured parks towards fostering self-sustaining, wilder ecosystems within cities. Unlike traditional urban greening, which often prioritises aesthetic control and human convenience, rewilding initiatives aim to restore natural processes, enhance biodiversity, and create spaces where nature can thrive with minimal human intervention. This approach is gaining increasing traction globally as cities grapple with the dual challenges of rapid biodiversity loss and the escalating impacts of climate change. Proponents argue that by allowing natural systems to reclaim parts of the urban fabric, cities can not only become more resilient and ecologically diverse but also offer profound benefits for human well-being, reconnecting residents with wilderness and natural cycles. It signifies a paradigm shift from merely 'adding' greenery to 'integrating' wild nature."
+    },
+    {
+      "id": "B",
+      "content": "Practical applications of urban rewilding encompass a diverse range of strategies tailored to specific urban contexts. A common technique involves the reintroduction of native plant species and the removal of non-native, often ornamental, flora, thereby supporting local insect and animal populations. Creating 'green corridors' or 'eco-links' is another vital component, connecting fragmented natural spaces like parks, riversides, and derelict land, allowing for the movement of wildlife and the dispersal of seeds. De-paving initiatives, where concrete and asphalt surfaces are removed to expose soil and allow for natural vegetation growth, transform impermeable surfaces into permeable, biodiverse habitats. Furthermore, natural water management systems, such as rain gardens and constructed wetlands, mimic natural hydrological processes, mitigating flood risks while providing new habitats. Examples range from small community-led projects transforming vacant lots into wildflower meadows to large-scale municipal programmes reforesting former industrial sites or revitalising urban rivers."
+    },
+    {
+      "id": "C",
+      "content": "Despite its ecological promise, urban rewilding faces several substantial challenges and criticisms. One primary hurdle is public perception; many urban residents are accustomed to highly managed green spaces and may view rewilded areas as untidy, neglected, or even unsafe. Concerns about increased pest populations (e.g., rodents, insects) or the potential for certain plant species to exacerbate allergies are also common. Economically, while rewilding can reduce long-term maintenance costs associated with traditional landscaping, initial investment in habitat restoration, native species procurement, and community engagement can be significant. Ecologically, there are complexities in managing the reintroduction of species, ensuring genetic diversity, and preventing the spread of invasive species that might outcompete native flora and fauna. Balancing human recreational needs with the imperative to protect sensitive ecosystems also requires careful planning and robust policy frameworks, often leading to conflicts over land use."
+    },
+    {
+      "id": "D",
+      "content": "Looking ahead, the future of urban rewilding appears increasingly integrated into broader urban development strategies, moving beyond isolated projects to become a fundamental aspect of resilient city planning. Success hinges on robust policy support, cross-sector collaboration, and sustained community engagement. Educational initiatives are crucial for shifting public attitudes, helping residents understand the ecological value of wilder spaces and fostering a sense of stewardship. Citizen science programmes, where residents monitor biodiversity or participate in planting efforts, can deepen this connection. The long-term benefits extend far beyond biodiversity conservation, contributing significantly to climate change adaptation through enhanced carbon sequestration, reduced urban heat island effects, and improved stormwater management. Ultimately, urban rewilding offers a transformative vision for cities, envisioning them not merely as human habitats but as vibrant, interconnected ecosystems where both people and nature can flourish in a mutually beneficial relationship."
+    }
+  ],
+  "headings": [
+    {
+      "id": "i",
+      "text": "Addressing the economic costs of urban development."
+    },
+    {
+      "id": "ii",
+      "text": "Practical methods for creating wilder urban environments."
+    },
+    {
+      "id": "iii",
+      "text": "Obstacles and public concerns in rewilding projects."
+    },
+    {
+      "id": "iv",
+      "text": "The historical evolution of city parks."
+    },
+    {
+      "id": "v",
+      "text": "A new definition for nature within metropolitan areas."
+    },
+    {
+      "id": "vi",
+      "text": "The enduring vision and broader advantages of urban rewilding."
+    },
+    {
+      "id": "vii",
+      "text": "The role of local government in conservation efforts."
+    }
+  ],
+  "answers": {
+    "A": "v",
+    "B": "ii",
+    "C": "iii",
+    "D": "vi"
+  },
+  "question_type": "matching_headings",
+  "id": "23365122-a441-4943-a545-4718affa435a",
+  "created_at": "2026-03-08T05:19:00.048Z",
+  "shareUrl": "http://localhost:5080/?id=23365122-a441-4943-a545-4718affa435a"
+}
