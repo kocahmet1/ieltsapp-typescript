@@ -10088,6 +10088,10 @@ body {
   padding: 1px 2px;
 }
 
+.error-highlight:hover {
+  z-index: 1000;
+}
+
 .error-tooltip {
   display: none;
   position: absolute;
@@ -10098,8 +10102,8 @@ body {
   border: 1px solid var(--accent-red);
   border-radius: var(--radius-md);
   padding: var(--spacing-sm) var(--spacing-md);
-  min-width: 180px;
-  max-width: 260px;
+  min-width: min(180px, 85vw);
+  max-width: min(260px, 85vw);
   z-index: 200;
   box-shadow: var(--shadow-lg);
   text-align: left;
@@ -10129,6 +10133,10 @@ body {
   border-radius: 0;
   cursor: help;
   padding: 0;
+}
+
+.error-highlight-meta:hover {
+  z-index: 1000;
 }
 
 .error-highlight-meta .error-tooltip {
@@ -10573,7 +10581,7 @@ body {
 }
 
 .text-box {
-  overflow: hidden;
+  overflow: visible;
   max-width: 100%;
 }
 
