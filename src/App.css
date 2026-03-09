@@ -102,6 +102,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+input,
+button,
+textarea,
+select {
+  font-family: inherit;
+}
+
 
 /* ===================================
    App Layout
@@ -10915,6 +10922,3 @@ body {
     }
   }
 }
-
-
-

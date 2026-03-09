@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
-import { BookOpen, Moon, Sun, AlertCircle, Settings, BarChart3, PenLine, FileText, Mic, Headphones } from 'lucide-react';
+import { BookOpen, Moon, Sun, AlertCircle, BarChart3, PenLine, FileText, Mic, Headphones } from 'lucide-react';
 import { ExamSelector } from './components/ExamSelector';
 import { ExamView } from './components/ExamView';
 import { ImportExamModal } from './components/ImportExamModal';
@@ -349,7 +349,7 @@ function App() {
             newAnswers.set(questionId, {
               ...currentAnswer,
               isLoading: false,
-              explanation: 'AÃ§Ä±klama yÃ¼klenirken bir hata oluÅŸtu. LÃ¼tfen tekrar deneyin.'
+              explanation: 'Açıklama yüklenirken bir hata oluştu. Lütfen tekrar deneyin.'
             });
           }
           return newAnswers;
@@ -470,7 +470,7 @@ function App() {
   };
 
   const handleClearTrackingData = async () => {
-    if (confirm('TÃ¼m performans verilerini silmek istediÄŸinizden emin misiniz? Bu iÅŸlem geri alÄ±namaz.')) {
+    if (confirm('Tüm performans verilerini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
       await clearTrackingData();
       await loadPerformanceData();
     }
@@ -783,7 +783,7 @@ function App() {
             <span>English Master</span>
           </div>
           {!useFirebase && (
-            <div className="local-mode-badge" title="Firebase yapÄ±landÄ±rÄ±lmamÄ±ÅŸ - Yerel depolama kullanÄ±lÄ±yor">
+            <div className="local-mode-badge" title="Firebase yapılandırılmamış - Yerel depolama kullanılıyor">
               <AlertCircle size={16} />
               <span>Yerel Mod</span>
             </div>
@@ -826,16 +826,16 @@ function App() {
           <button
             className="nav-item nav-speaking"
             onClick={() => setShowSpeakingPractice(true)}
-            title="IELTS KonuÅŸma PratiÄŸi"
+            title="IELTS Konuşma Pratiği"
           >
             <Mic size={18} />
-            <span>KonuÅŸma</span>
+            <span>Konuşma</span>
           </button>
 
           <button
             className="nav-item nav-listening"
             onClick={() => setShowListeningPractice(true)}
-            title="IELTS Dinleme PratiÄŸi"
+            title="IELTS Dinleme Pratiği"
           >
             <Headphones size={18} />
             <span>Dinleme</span>
@@ -844,7 +844,7 @@ function App() {
           <button
             className="nav-item nav-writing"
             onClick={() => setShowWritingPractice(true)}
-            title="Yazma PratiÄŸi"
+            title="Yazma Pratiği"
           >
             <PenLine size={18} />
             <span>Yazma</span>
@@ -856,10 +856,10 @@ function App() {
             <button
               className="nav-item nav-logout"
               onClick={logout}
-              title="Ã‡Ä±kÄ±ÅŸ Yap"
+              title="Çıkış Yap"
               style={{ color: '#f87171' }}
             >
-              <span>Ã‡Ä±kÄ±ÅŸ Yap ({user.email?.split('@')[0]})</span>
+              <span>Çıkış Yap ({user.email?.split('@')[0]})</span>
             </button>
           ) : (
             <>
@@ -867,14 +867,14 @@ function App() {
                 className="nav-item nav-login"
                 onClick={() => { setAuthMode('login'); setShowAuthModal(true); }}
               >
-                <span>GiriÅŸ Yap</span>
+                <span>Giriş Yap</span>
               </button>
               <button
                 className="nav-item nav-signup"
                 onClick={() => { setAuthMode('register'); setShowAuthModal(true); }}
                 style={{ background: 'rgba(167, 139, 250, 0.15)', color: '#c4b5fd', borderRadius: '8px' }}
               >
-                <span>KayÄ±t Ol</span>
+                <span>Kayıt Ol</span>
               </button>
             </>
           )}
@@ -896,25 +896,16 @@ function App() {
             onClick={() => setShowVocabVault(true)}
           >
             <BookOpen size={20} />
-            <span>Kelime KasasÄ±</span>
+            <span>Kelime Kasası</span>
             {vocabWords.length > 0 && (
               <span className="badge">{vocabWords.length}</span>
             )}
           </button>
 
           <button
-            className="admin-btn"
-            onClick={() => setShowAdminPage(true)}
-            title="YÃ¶netim Paneli"
-          >
-            <Settings size={20} />
-            <span>YÃ¶netim</span>
-          </button>
-
-          <button
             className="theme-toggle"
             onClick={() => setIsDarkMode(!isDarkMode)}
-            title={isDarkMode ? 'AÃ§Ä±k tema' : 'Koyu tema'}
+            title={isDarkMode ? 'Açık tema' : 'Koyu tema'}
           >
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
@@ -947,31 +938,31 @@ function App() {
 
                 {/* Configuration Status */}
                 <div className="config-status">
-                  <h3>YapÄ±landÄ±rma Durumu</h3>
-                  <div className={`status-item ${useFirebase ? 'configured' : 'not-configured'}`}>
+                  <h3>Yapılandırma Durumu</h3>
+                  <div className={`status - item ${useFirebase ? 'configured' : 'not-configured'} `}>
                     <span className="status-dot"></span>
                     <span>Firebase: {useFirebase ? 'Aktif' : 'Yerel Depolama'}</span>
                   </div>
-                  <div className={`status-item ${openAIConfigured ? 'configured' : 'not-configured'}`}>
+                  <div className={`status - item ${openAIConfigured ? 'configured' : 'not-configured'} `}>
                     <span className="status-dot"></span>
-                    <span>OpenAI: {openAIConfigured ? 'Aktif' : 'YapÄ±landÄ±rÄ±lmamÄ±ÅŸ'}</span>
+                    <span>OpenAI: {openAIConfigured ? 'Aktif' : 'Yapılandırılmamış'}</span>
                   </div>
                 </div>
 
                 {/* Quick Stats */}
                 {userAnswers.size > 0 && (
                   <div className="quick-stats">
-                    <h3>HÄ±zlÄ± Ä°statistik</h3>
+                    <h3>Hızlı statistik</h3>
                     <div className="stat-row">
                       <span>Cevaplanan:</span>
                       <span>{userAnswers.size} / {currentExam.questions.length}</span>
                     </div>
                     <div className="stat-row correct">
-                      <span>DoÄŸru:</span>
+                      <span>Doğru:</span>
                       <span>{Array.from(userAnswers.values()).filter(a => a.isCorrect).length}</span>
                     </div>
                     <div className="stat-row incorrect">
-                      <span>YanlÄ±ÅŸ:</span>
+                      <span>Yanlış:</span>
                       <span>{Array.from(userAnswers.values()).filter(a => !a.isCorrect).length}</span>
                     </div>
                   </div>
@@ -980,11 +971,11 @@ function App() {
             )}
 
             {/* Exam Content */}
-            <div className={`content ${!currentExam ? 'full-width' : ''}`}>
+            <div className={`content ${!currentExam ? 'full-width' : ''} `}>
               {isLoadingCurrentExam ? (
                 <div className="loading-state">
                   <div className="spinner-large"></div>
-                  <p>SÄ±nav yÃ¼kleniyor...</p>
+                  <p>Sınav yükleniyor...</p>
                 </div>
               ) : currentExam ? (
                 <ExamView
@@ -1000,8 +991,8 @@ function App() {
                   <div className="welcome-hero">
                     <div className="hero-glow"></div>
                     <BookOpen size={56} className="hero-icon" />
-                    <h1>Ä°ngilizce Ã–ÄŸrenme YolculuÄŸu</h1>
-                    <p>Beceri bazlÄ± pratik yap, kelime hazneni geliÅŸtir ve AI tabanlÄ± geri bildirimlerle performansÄ±nÄ± takip et.</p>
+                    <h1>ngilizce Öğrenme Yolculuğu</h1>
+                    <p>Beceri bazlı pratik yap, kelime hazneni geliştir ve AI tabanlı geri bildirimlerle performansını takip et.</p>
                   </div>
 
                   <div className="dashboard-controls">
@@ -1017,7 +1008,7 @@ function App() {
                   </div>
 
                   <div className="skill-cards-grid">
-                    {/* SÄ±nav Card */}
+                    {/* Sınav Card */}
                     <button
                       className="skill-card skill-card-exam"
                       onClick={() => {
@@ -1032,7 +1023,7 @@ function App() {
                         <BookOpen size={32} />
                       </div>
                       <div className="skill-card-content">
-                        <h3>SÄ±nav</h3>
+                        <h3>Sınav</h3>
                         <p>Gramer ve kelime bilgini test et</p>
                       </div>
                       <div className="skill-card-arrow">â†’</div>
@@ -1049,7 +1040,7 @@ function App() {
                       </div>
                       <div className="skill-card-content">
                         <h3>Gramer</h3>
-                        <p>Dilbilgisi kurallarÄ±nÄ± Ã¶ÄŸren ve pratik yap</p>
+                        <p>Dilbilgisi kurallarını öğren ve pratik yap</p>
                       </div>
                       <div className="skill-card-arrow">â†’</div>
                     </button>
@@ -1064,12 +1055,12 @@ function App() {
                       </div>
                       <div className="skill-card-content">
                         <h3>Okuma</h3>
-                        <p>Akademik metinleri anlama pratiÄŸi yap</p>
+                        <p>Akademik metinleri anlama pratiği yap</p>
                       </div>
                       <div className="skill-card-arrow">â†’</div>
                     </button>
 
-                    {/* KonuÅŸma Card */}
+                    {/* Konuşma Card */}
                     <button
                       className="skill-card skill-card-speaking"
                       onClick={() => setShowSpeakingPractice(true)}
@@ -1078,8 +1069,8 @@ function App() {
                         <Mic size={32} />
                       </div>
                       <div className="skill-card-content">
-                        <h3>KonuÅŸma</h3>
-                        <p>Speaking sÄ±navÄ±na hazÄ±rlan</p>
+                        <h3>Konuşma</h3>
+                        <p>Speaking sınavına hazırlan</p>
                       </div>
                       <div className="skill-card-arrow">â†’</div>
                     </button>
@@ -1094,7 +1085,7 @@ function App() {
                       </div>
                       <div className="skill-card-content">
                         <h3>Dinleme</h3>
-                        <p>Listening bÃ¶lÃ¼mÃ¼ne hazÄ±rlan</p>
+                        <p>Listening bölümüne hazırlan</p>
                       </div>
                       <div className="skill-card-arrow">â†’</div>
                     </button>
@@ -1109,40 +1100,16 @@ function App() {
                       </div>
                       <div className="skill-card-content">
                         <h3>Yazma</h3>
-                        <p>Essay ve task yazÄ±mÄ±nÄ± geliÅŸtir</p>
+                        <p>Essay ve task yazımını geliştir</p>
                       </div>
                       <div className="skill-card-arrow">â†’</div>
                     </button>
                   </div>
 
-                  {/* Quick Start CTA */}
-                  <div className="quick-start-section">
-                    {exams.length > 0 ? (
-                      <button
-                        className="quick-start-btn"
-                        onClick={() => setSelectedExamId(exams[0].id)}
-                      >
-                        <span className="btn-pulse"></span>
-                        SÄ±nava Devam Et
-                      </button>
-                    ) : (
-                      <button
-                        className="quick-start-btn"
-                        onClick={handleLoadSampleExam}
-                      >
-                        <span className="btn-pulse"></span>
-                        120 Soruluk Ã–rnek SÄ±navÄ± YÃ¼kle
-                      </button>
-                    )}
-                    <p className="quick-start-hint">
-                      veya Ã¼st menÃ¼den bir beceri seÃ§in
-                    </p>
-                  </div>
-
                   {/* Floating Config Status */}
                   <div className="floating-config-status">
-                    <div className={`status-dot ${useFirebase ? 'configured' : 'not-configured'}`} title={`Firebase: ${useFirebase ? 'Aktif' : 'Yerel'}`}></div>
-                    <div className={`status-dot ${openAIConfigured ? 'configured' : 'not-configured'}`} title={`OpenAI: ${openAIConfigured ? 'Aktif' : 'Pasif'}`}></div>
+                    <div className={`status - dot ${useFirebase ? 'configured' : 'not-configured'} `} title={`Firebase: ${useFirebase ? 'Aktif' : 'Yerel'} `}></div>
+                    <div className={`status - dot ${openAIConfigured ? 'configured' : 'not-configured'} `} title={`OpenAI: ${openAIConfigured ? 'Aktif' : 'Pasif'} `}></div>
                   </div>
                 </div>
               )}
