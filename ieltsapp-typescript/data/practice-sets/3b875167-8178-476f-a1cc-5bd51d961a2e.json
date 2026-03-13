@@ -1,0 +1,79 @@
+{
+  "passage": "The phenomenon of light pollution, often overshadowed by more prominent environmental concerns like air and water contamination, represents a growing global challenge with far-reaching ecological, astronomical, and health implications. Defined broadly as the excessive or inappropriate use of artificial light, light pollution manifests in various forms, including skyglow – the diffuse luminance of the night sky over inhabited areas; light trespass – unwanted light spilling into private property; and glare – excessive brightness causing visual discomfort. The proliferation of artificial lighting, driven by urbanization, industrialization, and a societal demand for extended nighttime activity, has fundamentally altered the natural nocturnal environment across vast swathes of the planet.\n\nHistorically, human societies experienced true darkness, punctuated only by natural light sources like the moon and stars. However, the advent of electric lighting in the late 19th century and its subsequent widespread adoption have progressively eroded this natural heritage. Today, an estimated 80% of the world's population lives under skyglow, preventing billions from experiencing a truly dark night sky. This loss is particularly acute in developed nations and densely populated regions, where urban centers emit vast quantities of unshielded and inefficient light upwards and outwards.\n\nOne of the most immediate and visually striking consequences of light pollution is its detrimental effect on astronomy. Observatories, historically sited in remote areas to minimize atmospheric interference, are increasingly finding their views compromised by encroaching urban glow. Skyglow significantly reduces the contrast between celestial objects and the night sky background, effectively dimming faint stars, galaxies, and nebulae. This diminishes the capacity for ground-based astronomical research, forcing scientists to either relocate to even more isolated regions or rely on expensive space-based telescopes, which, while powerful, cannot fully replace the continuous monitoring capabilities of terrestrial observatories. The ability to study distant galaxies, track asteroids, and even observe basic planetary phenomena is severely hampered.\n\nBeyond the realm of astronomy, light pollution exerts profound impacts on ecosystems and biodiversity. Many species, from insects to mammals, are predominantly nocturnal, having evolved over millennia to rely on natural cycles of light and darkness for navigation, foraging, reproduction, and predator avoidance. Artificial light at night disrupts these delicate ecological balances. Insects, for instance, are notoriously attracted to artificial lights, leading to exhaustion, increased predation risk, and altered migratory patterns. Millions perish nightly around streetlights, impacting food webs and pollination services. Migratory birds, which often navigate using celestial cues, become disoriented by urban lights, leading to collisions with illuminated structures and disruption of their arduous journeys.\n\nMarine ecosystems are also vulnerable. Sea turtle hatchlings, for example, instinctively orient themselves towards the brightest horizon, which under natural conditions would be the moonlit ocean. Artificial lights from coastal developments can disorient them, drawing them inland where they face dehydration, predation, and vehicular traffic, significantly reducing their survival rates. Other nocturnal predators, like bats, may avoid brightly lit areas, fragmenting their habitats and limiting their access to food sources, while prey species might become more exposed. The timing of biological events, such as flowering in plants or the breeding cycles of amphibians, can also be altered by prolonged exposure to artificial light.\n\nThe implications of light pollution extend to human health. Humans, like other organisms, possess an internal \"body clock\" or circadian rhythm, which is primarily regulated by natural light-dark cycles. Exposure to artificial light at night, particularly blue-rich light emitted by many modern LED sources and electronic screens, can suppress the production of melatonin, a hormone crucial for regulating sleep and bolstering the immune system. Chronic disruption of circadian rhythms has been linked to a range of health issues, including sleep disorders, depression, obesity, and even an increased risk of certain cancers. While the direct causal links are still under investigation, the widespread alteration of natural light exposure patterns raises significant public health concerns.\n\nAddressing light pollution requires a multi-faceted approach involving technological innovation, policy changes, and public awareness. Solutions include the adoption of \"dark-sky friendly\" lighting principles: using fully shielded fixtures that direct light downwards, employing warmer color temperatures (lower Kelvin values) that emit less blue light, reducing overall light intensity where possible, and utilizing adaptive controls such as dimmers and motion sensors. International initiatives, like the International Dark-Sky Association (IDA), advocate for responsible lighting practices and designate \"Dark Sky Places\" to protect and preserve natural night environments. Public education campaigns are vital to inform individuals and communities about the benefits of reducing light pollution, not only for astronomy and wildlife but also for energy conservation and human well-being.\n\nIn conclusion, light pollution is a pervasive and often underestimated environmental pollutant with profound and complex consequences. Its widespread impact on astronomical research, the delicate balance of ecosystems, and potentially human health underscores the urgency of proactive measures. By embracing sustainable lighting technologies and fostering a greater appreciation for the natural night, societies can work towards mitigating this global challenge, ensuring that future generations can once again experience the awe-inspiring beauty and ecological integrity of a truly dark sky.",
+  "questions": [
+    {
+      "id": 1,
+      "question_type": "FITB",
+      "question": "Light pollution is generally understood as the immoderate or unsuitable application of artificial illumination, presenting itself in forms such as skyglow, light trespass, and __________, which describes excessive brightness that causes visual discomfort.",
+      "answer": "glare",
+      "source_sentence": "Defined broadly as the excessive or inappropriate use of artificial light, light pollution manifests in various forms, including skyglow – the diffuse luminance of the night sky over inhabited areas; light trespass – unwanted light spilling into private property; and glare – excessive brightness causing visual discomfort."
+    },
+    {
+      "id": 2,
+      "question_type": "FITB",
+      "question": "It is estimated that approximately __________ of the global population currently resides in areas affected by skyglow, consequently depriving many of the opportunity to witness a genuinely dark night sky.",
+      "answer": "80%",
+      "source_sentence": "Today, an estimated 80% of the world's population lives under skyglow, preventing billions from experiencing a truly dark night sky."
+    },
+    {
+      "id": 3,
+      "question_type": "FITB",
+      "question": "The phenomenon of skyglow substantially diminishes the __________ between astronomical bodies and the background of the night sky, thereby making dim stars, galaxies, and nebulae appear less distinct.",
+      "answer": "contrast",
+      "source_sentence": "Skyglow significantly reduces the contrast between celestial objects and the night sky background, effectively dimming faint stars, galaxies, and nebulae."
+    },
+    {
+      "id": 4,
+      "question_type": "FITB",
+      "question": "Young sea turtles instinctively direct themselves towards the most luminous horizon, which in a natural environment would typically be the _________.",
+      "answer": "moonlit ocean",
+      "source_sentence": "Sea turtle hatchlings, for example, instinctively orient themselves towards the brightest horizon, which under natural conditions would be the moonlit ocean."
+    },
+    {
+      "id": 5,
+      "question_type": "FITB",
+      "question": "Being exposed to artificial light during nighttime, especially blue-spectrum light from contemporary LED devices and digital displays, can inhibit the body's synthesis of __________, a vital hormone for sleep regulation and immune support.",
+      "answer": "melatonin",
+      "source_sentence": "Exposure to artificial light at night, particularly blue-rich light emitted by many modern LED sources and electronic screens, can suppress the production of melatonin, a hormone crucial for regulating sleep and bolstering the immune system."
+    },
+    {
+      "id": 6,
+      "question_type": "TFNG",
+      "statement": "Light pollution is a more significant environmental issue than air or water pollution.",
+      "answer": "False",
+      "relevant_passage": "The phenomenon of light pollution, often overshadowed by more prominent environmental concerns like air and water contamination, represents a growing global challenge with far-reaching ecological, astronomical, and health implications."
+    },
+    {
+      "id": 7,
+      "question_type": "TFNG",
+      "statement": "Space-based telescopes can fully compensate for the limitations ground-based observatories face due to light pollution.",
+      "answer": "False",
+      "relevant_passage": "This diminishes the capacity for ground-based astronomical research, forcing scientists to either relocate to even more isolated regions or rely on expensive space-based telescopes, which, while powerful, cannot fully replace the continuous monitoring capabilities of terrestrial observatories."
+    },
+    {
+      "id": 8,
+      "question_type": "TFNG",
+      "statement": "All types of insects are attracted to artificial lights, leading to their demise.",
+      "answer": "Not Given",
+      "relevant_passage": "Insects, for instance, are notoriously attracted to artificial lights, leading to exhaustion, increased predation risk, and altered migratory patterns. Millions perish nightly around streetlights, impacting food webs and pollination services."
+    },
+    {
+      "id": 9,
+      "question_type": "TFNG",
+      "statement": "The International Dark-Sky Association is an organization that works to protect natural night environments.",
+      "answer": "True",
+      "relevant_passage": "International initiatives, like the International Dark-Sky Association (IDA), advocate for responsible lighting practices and designate \"Dark Sky Places\" to protect and preserve natural night environments."
+    },
+    {
+      "id": 10,
+      "question_type": "TFNG",
+      "statement": "The primary cause of human sleep disorders is exposure to blue-rich artificial light at night.",
+      "answer": "Not Given",
+      "relevant_passage": "Exposure to artificial light at night, particularly blue-rich light emitted by many modern LED sources and electronic screens, can suppress the production of melatonin, a hormone crucial for regulating sleep and bolstering the immune system. Chronic disruption of circadian rhythms has been linked to a range of health issues, including sleep disorders, depression, obesity, and even an increased risk of certain cancers."
+    }
+  ],
+  "question_type": "mixed_fitb_tfng",
+  "id": "3b875167-8178-476f-a1cc-5bd51d961a2e",
+  "created_at": "2026-03-10T13:57:42.294Z",
+  "shareUrl": "http://localhost:5080/?id=3b875167-8178-476f-a1cc-5bd51d961a2e"
+}

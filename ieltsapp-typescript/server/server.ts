@@ -348,7 +348,7 @@ function mixedPrompt() {
   return `Generate an IELTS Academic reading practice set as JSON.
 
 Return a JSON object with:
-- passage: a reading passage of 800-1000 words.
+- passage: a reading passage of 800-1000 words. Separate each paragraph with a blank line (two newlines \\n\\n). The passage must have at least 4 clearly separated paragraphs.
 - questions: an array with 10 items.
 - question_type: exactly \"mixed_fitb_tfng\".
 
@@ -376,7 +376,7 @@ function matchingHeadingsPrompt() {
   return `Generate an IELTS Matching Headings reading practice set as JSON.
 
 Return a JSON object with:
-- passage: a 600-900 word passage.
+- passage: a 600-900 word passage. Separate each paragraph with a blank line (two newlines \\n\\n). The passage must have at least 3 clearly separated paragraphs.
 - paragraphs: an array of 3 to 5 paragraph objects with id and content.
 - headings: an array with 2 or 3 more headings than paragraphs. Each heading needs id and text.
 - answers: an object mapping paragraph ids to heading ids.

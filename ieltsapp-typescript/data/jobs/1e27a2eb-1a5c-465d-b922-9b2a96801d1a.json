@@ -1,0 +1,7 @@
+{
+  "id": "1e27a2eb-1a5c-465d-b922-9b2a96801d1a",
+  "status": "failed",
+  "created_at": "2026-03-10T13:57:02.389Z",
+  "practice_set_id": null,
+  "error": "Gemini request failed with 503: {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n"
+}

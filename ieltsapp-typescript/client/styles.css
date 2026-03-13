@@ -171,6 +171,19 @@ main {
     font-size: 1.05rem;
 }
 
+.passage p {
+    margin-bottom: 1em;
+    text-indent: 1.5em;
+}
+
+.passage p:first-child {
+    text-indent: 0;
+}
+
+.passage p:last-child {
+    margin-bottom: 0;
+}
+
 .highlight {
     background-color: #fff9c4;
     transition: background-color 0.3s ease;

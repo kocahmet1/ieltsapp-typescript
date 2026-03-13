@@ -1,0 +1,61 @@
+{
+  "passage": "The story of human civilization is inextricably linked with the rise of cities. For millennia, humanity lived in scattered nomadic groups, but around 10,000 BCE, with the advent of agriculture, permanent settlements began to form. Early cities, emerging in regions like Mesopotamia, the Indus Valley, and ancient China, were not merely larger villages; they represented a fundamental shift in human social organization. They served as centers for agricultural surplus collection and redistribution, offering protection against external threats, and facilitating the exchange of goods and ideas. The concentration of people allowed for specialization of labor beyond farming, leading to the development of crafts, administration, and religious institutions. These nascent urban centers, though modest by today's standards, laid the foundational blueprint for complex societies, demonstrating the inherent human drive towards communal living and collective advancement. Their strategic locations, often near fertile land and water sources, underscored their reliance on the surrounding natural environment for sustenance and survival.\n\nThe Industrial Revolution, beginning in the late 18th century, triggered an unprecedented wave of urbanization, fundamentally reshaping existing cities and giving birth to countless new ones. The promise of factory work drew millions from rural areas into burgeoning industrial hubs. However, this rapid influx of population far outpaced the capacity of urban infrastructure, leading to severe social and environmental consequences. Cities became characterized by overcrowded tenements, rampant disease due to poor sanitation, and widespread pollution from factories. Public health crises were common, and social inequality became starkly visible. Planning was largely non-existent, resulting in chaotic layouts, inadequate public spaces, and a general decline in living conditions for the working class. While these industrial centers were engines of economic growth and technological innovation, they also represented a period of significant urban blight and human suffering, highlighting the urgent need for systematic urban management.\n\nBy the mid-20th century, many industrialized cities faced a new set of challenges: suburbanization, deindustrialization, and urban decay. As industries moved out and middle-class populations migrated to the suburbs, city centers often experienced economic decline, neglected infrastructure, and increased social stratification. In response, urban planners and policymakers began to rethink the purpose and design of cities. The focus shifted from mere growth to sustainability, liveability, and social equity. Initiatives included urban renewal projects, the creation of green spaces and parks, the development of efficient public transportation networks, and the promotion of mixed-use developments to foster vibrant communities. Concepts like \"garden cities\" and \"new urbanism\" gained traction, advocating for planned, self-contained communities with a strong sense of place, aiming to balance economic development with environmental protection and social well-being. This era marked a conscious effort to rectify the mistakes of the past and build more resilient and human-centric urban environments.\n\nLooking ahead, cities are poised for another transformative era, driven by technological advancements and the urgent need to address climate change. The concept of the \"smart city\" has emerged, leveraging data, sensors, and interconnected systems to optimize urban services, from traffic management and energy consumption to public safety and waste collection. Artificial intelligence and the Internet of Things (IoT) are becoming integral tools for creating more efficient and responsive urban environments. Beyond technology, future cities are also being designed with a strong emphasis on sustainability and resilience. This includes investing in renewable energy, promoting circular economies, developing green infrastructure to mitigate climate impacts, and fostering social cohesion to withstand future shocks. While the promise of smart and sustainable cities is immense, challenges remain, particularly concerning data privacy, digital divides, and ensuring that technological advancements serve all residents equitably. The goal is to create urban spaces that are not only technologically advanced but also environmentally responsible, socially inclusive, and capable of adapting to an uncertain future.",
+  "paragraphs": [
+    {
+      "id": "A",
+      "content": "The story of human civilization is inextricably linked with the rise of cities. For millennia, humanity lived in scattered nomadic groups, but around 10,000 BCE, with the advent of agriculture, permanent settlements began to form. Early cities, emerging in regions like Mesopotamia, the Indus Valley, and ancient China, were not merely larger villages; they represented a fundamental shift in human social organization. They served as centers for agricultural surplus collection and redistribution, offering protection against external threats, and facilitating the exchange of goods and ideas. The concentration of people allowed for specialization of labor beyond farming, leading to the development of crafts, administration, and religious institutions. These nascent urban centers, though modest by today's standards, laid the foundational blueprint for complex societies, demonstrating the inherent human drive towards communal living and collective advancement. Their strategic locations, often near fertile land and water sources, underscored their reliance on the surrounding natural environment for sustenance and survival."
+    },
+    {
+      "id": "B",
+      "content": "The Industrial Revolution, beginning in the late 18th century, triggered an unprecedented wave of urbanization, fundamentally reshaping existing cities and giving birth to countless new ones. The promise of factory work drew millions from rural areas into burgeoning industrial hubs. However, this rapid influx of population far outpaced the capacity of urban infrastructure, leading to severe social and environmental consequences. Cities became characterized by overcrowded tenements, rampant disease due to poor sanitation, and widespread pollution from factories. Public health crises were common, and social inequality became starkly visible. Planning was largely non-existent, resulting in chaotic layouts, inadequate public spaces, and a general decline in living conditions for the working class. While these industrial centers were engines of economic growth and technological innovation, they also represented a period of significant urban blight and human suffering, highlighting the urgent need for systematic urban management."
+    },
+    {
+      "id": "C",
+      "content": "By the mid-20th century, many industrialized cities faced a new set of challenges: suburbanization, deindustrialization, and urban decay. As industries moved out and middle-class populations migrated to the suburbs, city centers often experienced economic decline, neglected infrastructure, and increased social stratification. In response, urban planners and policymakers began to rethink the purpose and design of cities. The focus shifted from mere growth to sustainability, liveability, and social equity. Initiatives included urban renewal projects, the creation of green spaces and parks, the development of efficient public transportation networks, and the promotion of mixed-use developments to foster vibrant communities. Concepts like \"garden cities\" and \"new urbanism\" gained traction, advocating for planned, self-contained communities with a strong sense of place, aiming to balance economic development with environmental protection and social well-being. This era marked a conscious effort to rectify the mistakes of the past and build more resilient and human-centric urban environments."
+    },
+    {
+      "id": "D",
+      "content": "Looking ahead, cities are poised for another transformative era, driven by technological advancements and the urgent need to address climate change. The concept of the \"smart city\" has emerged, leveraging data, sensors, and interconnected systems to optimize urban services, from traffic management and energy consumption to public safety and waste collection. Artificial intelligence and the Internet of Things (IoT) are becoming integral tools for creating more efficient and responsive urban environments. Beyond technology, future cities are also being designed with a strong emphasis on sustainability and resilience. This includes investing in renewable energy, promoting circular economies, developing green infrastructure to mitigate climate impacts, and fostering social cohesion to withstand future shocks. While the promise of smart and sustainable cities is immense, challenges remain, particularly concerning data privacy, digital divides, and ensuring that technological advancements serve all residents equitably. The goal is to create urban spaces that are not only technologically advanced but also environmentally responsible, socially inclusive, and capable of adapting to an uncertain future."
+    }
+  ],
+  "headings": [
+    {
+      "id": "i",
+      "text": "The initial impetus for human settlement"
+    },
+    {
+      "id": "ii",
+      "text": "Addressing the legacy of unchecked expansion"
+    },
+    {
+      "id": "iii",
+      "text": "The promise and pitfalls of technological integration"
+    },
+    {
+      "id": "iv",
+      "text": "A period of unprecedented and chaotic growth"
+    },
+    {
+      "id": "v",
+      "text": "The economic advantages of rural living"
+    },
+    {
+      "id": "vi",
+      "text": "The artistic expression in urban design"
+    },
+    {
+      "id": "vii",
+      "text": "The decline of traditional city centers"
+    }
+  ],
+  "answers": {
+    "A": "i",
+    "B": "iv",
+    "C": "ii",
+    "D": "iii"
+  },
+  "question_type": "matching_headings",
+  "id": "9ee2cda6-52bb-46d0-85f9-04e1281be097",
+  "created_at": "2026-03-10T13:48:13.589Z",
+  "shareUrl": "http://localhost:5080/?id=9ee2cda6-52bb-46d0-85f9-04e1281be097"
+}

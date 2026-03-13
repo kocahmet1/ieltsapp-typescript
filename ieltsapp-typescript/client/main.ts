@@ -517,7 +517,8 @@ function renderShareUrl(shareUrl: string): void {
 }
 
 function renderPassage(passage: string): void {
-  elements.passage.textContent = passage;
+  const paragraphs = passage.split(/\n\s*\n/).filter((p) => p.trim());
+  elements.passage.innerHTML = paragraphs.map((p) => `<p>${escapeHtml(p.trim())}</p>`).join('');
 }
 
 function renderMixedQuestions(practiceSet: MixedPracticeSet): void {
@@ -850,10 +851,16 @@ function applyHighlight(fragment: string): void {
     return;
   }
 
-  const before = escapeHtml(passage.slice(0, index));
-  const highlighted = escapeHtml(fragment);
-  const after = escapeHtml(passage.slice(index + fragment.length));
-  elements.passage.innerHTML = `${before}<span class="highlight">${highlighted}</span>${after}`;
+  const before = passage.slice(0, index);
+  const highlighted = fragment;
+  const after = passage.slice(index + fragment.length);
+  const raw = `${escapeHtml(before)}<mark-hl>${escapeHtml(highlighted)}</mark-hl>${escapeHtml(after)}`;
+  const paragraphs = raw.split(/\n\s*\n/).filter((p) => p.trim());
+  const html = paragraphs.map((p) => {
+    const withHighlight = p.trim().replace('<mark-hl>', '<span class="highlight">').replace('</mark-hl>', '</span>');
+    return `<p>${withHighlight}</p>`;
+  }).join('');
+  elements.passage.innerHTML = html;
   elements.passage.querySelector('.highlight')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
