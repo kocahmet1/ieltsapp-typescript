@@ -1,4 +1,4 @@
-﻿import {
+import {
     collection,
     doc,
     setDoc,
@@ -61,10 +61,14 @@ export async function addMistakeRecord(
     };
 
     const mistakesRef = collection(db, 'users', userId, 'mistakes');
-    await setDoc(doc(mistakesRef), {
+    const data: Record<string, any> = {
         ...mistake,
         timestamp: Timestamp.fromDate(mistake.timestamp)
+    };
+    Object.keys(data).forEach(key => {
+        if (data[key] === undefined) delete data[key];
     });
+    await setDoc(doc(mistakesRef), data);
 }
 
 export async function updateAnswerStats(isCorrect: boolean): Promise<void> {
@@ -241,10 +245,15 @@ export async function saveWritingSubmission(submission: Omit<WritingSubmission, 
     const ref = collection(db, 'users', userId, 'writingSubmissions');
 
     const docRef = doc(ref);
-    await setDoc(docRef, {
+    // Strip undefined values — Firestore rejects them
+    const data: Record<string, any> = {
         ...submission,
         submittedAt: Timestamp.fromDate(submission.submittedAt)
+    };
+    Object.keys(data).forEach(key => {
+        if (data[key] === undefined) delete data[key];
     });
+    await setDoc(docRef, data);
 
     return docRef.id;
 }
