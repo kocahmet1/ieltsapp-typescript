@@ -21,6 +21,14 @@
   background: rgba(45, 212, 191, 0.12);
 }
 
+.skill-card-sentence-lab.highlight-card {
+  --highlight-color: #2dd4bf;
+  --highlight-rgb: 45, 212, 191;
+  --highlight-badge-top: #2dd4bf;
+  --highlight-badge-bottom: #0f766e;
+  --highlight-badge-shadow: #0b5f5a;
+}
+
 [data-theme="light"] .nav-sentence-lab:hover,
 [data-theme="light"] .nav-sentence-lab:focus {
   color: #0f766e;
@@ -39,6 +47,14 @@
 [data-theme="light"] .skill-card-sentence-lab .skill-card-icon {
   color: #0f766e;
   background: rgba(15, 118, 110, 0.1);
+}
+
+[data-theme="light"] .skill-card-sentence-lab.highlight-card {
+  --highlight-color: #0f766e;
+  --highlight-rgb: 15, 118, 110;
+  --highlight-badge-top: #14b8a6;
+  --highlight-badge-bottom: #0f766e;
+  --highlight-badge-shadow: #0b5f5a;
 }
 
 .sentence-lab-overlay {

@@ -782,7 +782,7 @@ function App() {
         <div className="header-left">
           <div className="logo" onClick={() => { setSelectedExamId(null); setCurrentExam(null); }} style={{ cursor: 'pointer' }}>
             <BookOpen size={32} />
-            <span>English Master</span>
+            <span>Veritas Ielts Prep App</span>
           </div>
           {!useFirebase && (
             <div className="local-mode-badge" title="Firebase yapılandırılmamış - Yerel depolama kullanılıyor">
@@ -999,26 +999,22 @@ function App() {
                 />
               ) : (
                 <div className="welcome-dashboard">
-                  <div className="welcome-hero">
-                    <div className="hero-glow"></div>
-                    <BookOpen size={56} className="hero-icon" />
-                    <h1>ngilizce Öğrenme Yolculuğu</h1>
-                    <p>Beceri bazlı pratik yap, kelime hazneni geliştir ve AI tabanlı geri bildirimlerle performansını takip et.</p>
-                  </div>
-
-                  <div className="dashboard-controls">
-                    <div className="exam-selector-wrapper">
-                      <ExamSelector
-                        exams={exams}
-                        selectedExamId={selectedExamId}
-                        onSelectExam={setSelectedExamId}
-                        onDeleteExam={handleDeleteExam}
-                        isLoading={isLoadingExams}
-                      />
-                    </div>
-                  </div>
-
                   <div className="skill-cards-grid">
+                    <button
+                      className="skill-card skill-card-sentence-lab highlight-card"
+                      onClick={() => setShowSentenceLab(true)}
+                    >
+                      <div className="new-badge">NEW</div>
+                      <div className="skill-card-icon">
+                        <Languages size={32} />
+                      </div>
+                      <div className="skill-card-content">
+                        <h3>Sentence Lab</h3>
+                        <p>Kucuk cumlelerle yapi, grammar ve punctuation calis</p>
+                      </div>
+                      <div className="skill-card-arrow">â†’</div>
+                    </button>
+
                     {/* Sınav Card */}
                     <button
                       className="skill-card skill-card-exam"
@@ -1042,10 +1038,9 @@ function App() {
 
                     {/* Gramer Card */}
                     <button
-                      className="skill-card skill-card-grammar highlight-card"
+                      className="skill-card skill-card-grammar"
                       onClick={() => setShowGrammarLessons(true)}
                     >
-                      <div className="new-badge">NEW</div>
                       <div className="skill-card-icon">
                         <BookOpen size={32} />
                       </div>
@@ -1112,20 +1107,6 @@ function App() {
                       <div className="skill-card-content">
                         <h3>Yazma</h3>
                         <p>Essay ve task yazımını geliştir</p>
-                      </div>
-                      <div className="skill-card-arrow">â†’</div>
-                    </button>
-
-                    <button
-                      className="skill-card skill-card-sentence-lab"
-                      onClick={() => setShowSentenceLab(true)}
-                    >
-                      <div className="skill-card-icon">
-                        <Languages size={32} />
-                      </div>
-                      <div className="skill-card-content">
-                        <h3>Sentence Lab</h3>
-                        <p>Kucuk cumlelerle yapi, grammar ve punctuation calis</p>
                       </div>
                       <div className="skill-card-arrow">â†’</div>
                     </button>

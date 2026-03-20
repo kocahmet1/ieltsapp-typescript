@@ -8061,29 +8061,30 @@ select {
   background: rgba(88, 166, 255, 0.12);
 }
 
-/* Allow overflow specifically for grammar card to show the badge */
-.skill-card-grammar {
-  overflow: visible !important;
-}
-
 .highlight-card {
-  box-shadow: 0 0 15px rgba(88, 166, 255, 0.2);
+  --highlight-color: var(--accent-primary);
+  --highlight-rgb: 88, 166, 255;
+  --highlight-badge-top: #58a6ff;
+  --highlight-badge-bottom: #005cc5;
+  --highlight-badge-shadow: #004494;
+  overflow: visible !important;
+  box-shadow: 0 0 15px rgba(var(--highlight-rgb), 0.2);
   animation: card-pulse 3s infinite ease-in-out;
 }
 
 @keyframes card-pulse {
   0% {
-    box-shadow: 0 0 15px rgba(88, 166, 255, 0.2);
+    box-shadow: 0 0 15px rgba(var(--highlight-rgb), 0.2);
     border-color: var(--border-primary);
   }
 
   50% {
-    box-shadow: 0 0 25px rgba(88, 166, 255, 0.4);
-    border-color: var(--accent-primary);
+    box-shadow: 0 0 25px rgba(var(--highlight-rgb), 0.4);
+    border-color: var(--highlight-color);
   }
 
   100% {
-    box-shadow: 0 0 15px rgba(88, 166, 255, 0.2);
+    box-shadow: 0 0 15px rgba(var(--highlight-rgb), 0.2);
     border-color: var(--border-primary);
   }
 }
@@ -8092,7 +8093,7 @@ select {
   position: absolute;
   top: -12px;
   right: -8px;
-  background: linear-gradient(180deg, #58a6ff 0%, #005cc5 100%);
+  background: linear-gradient(180deg, var(--highlight-badge-top) 0%, var(--highlight-badge-bottom) 100%);
   color: white;
   padding: 4px 12px;
   border-radius: 20px;
@@ -8101,8 +8102,8 @@ select {
   letter-spacing: 0.5px;
   /* 3D Depth Shadows */
   box-shadow:
-    0 2px 0 #004494,
-    0 4px 10px rgba(88, 166, 255, 0.4),
+    0 2px 0 var(--highlight-badge-shadow),
+    0 4px 10px rgba(var(--highlight-rgb), 0.4),
     inset 0 1px 1px rgba(255, 255, 255, 0.4);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   animation: badge-float-3d 3s infinite ease-in-out;
@@ -8286,9 +8287,39 @@ select {
     grid-template-columns: repeat(3, 1fr);
   }
 
-  .skill-cards-grid .skill-card:nth-child(4),
-  .skill-cards-grid .skill-card:nth-child(5) {
-    grid-column: span 1;
+  .skill-cards-grid .skill-card-sentence-lab {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .skill-cards-grid .skill-card-exam {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .skill-cards-grid .skill-card-grammar {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .skill-cards-grid .skill-card-reading {
+    grid-column: 3;
+    grid-row: 2;
+  }
+
+  .skill-cards-grid .skill-card-speaking {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .skill-cards-grid .skill-card-listening {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  .skill-cards-grid .skill-card-writing {
+    grid-column: 3;
+    grid-row: 3;
   }
 }
 
