@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
-import { BookOpen, Moon, Sun, AlertCircle, BarChart3, PenLine, FileText, Mic, Headphones } from 'lucide-react';
+import { BookOpen, Moon, Sun, AlertCircle, BarChart3, PenLine, FileText, Mic, Headphones, Languages } from 'lucide-react';
 import { ExamSelector } from './components/ExamSelector';
 import { ExamView } from './components/ExamView';
 import { ImportExamModal } from './components/ImportExamModal';
@@ -13,6 +13,7 @@ import { ReadingComprehension } from './components/ReadingComprehension';
 import { SpeakingPractice } from './components/SpeakingPractice';
 import { ListeningPractice } from './components/ListeningPractice';
 import { GrammarLessons } from './components/GrammarLessons';
+import { SentenceLab } from './components/SentenceLab';
 import { Exam, UserAnswer, VocabWord, PerformanceStats, MistakeRecord, GrammarCategory, WritingSubmission, WritingPrompt, WritingFeedback, ReadingProgress, ReadingStats, ReadingQuestionType, ListeningProgress, ListeningStats, ListeningQuestionType, IELTSListeningSection } from './types';
 import { getAllExams, getExamById, createExam, parseExamText, deleteExam } from './services/examService';
 import { getAllVocabWords, addVocabWord, removeVocabWord } from './services/vocabService';
@@ -87,6 +88,7 @@ function App() {
   const [showSpeakingPractice, setShowSpeakingPractice] = useState(false);
   const [showListeningPractice, setShowListeningPractice] = useState(false);
   const [showGrammarLessons, setShowGrammarLessons] = useState(false);
+  const [showSentenceLab, setShowSentenceLab] = useState(false);
 
   // Vocab vault state
   const [vocabWords, setVocabWords] = useState<VocabWord[]>([]);
@@ -849,6 +851,15 @@ function App() {
             <PenLine size={18} />
             <span>Yazma</span>
           </button>
+
+          <button
+            className="nav-item nav-sentence-lab"
+            onClick={() => setShowSentenceLab(true)}
+            title="Sentence Lab"
+          >
+            <Languages size={18} />
+            <span>Sentence Lab</span>
+          </button>
         </nav>
 
         <div className="header-right">
@@ -1104,6 +1115,20 @@ function App() {
                       </div>
                       <div className="skill-card-arrow">â†’</div>
                     </button>
+
+                    <button
+                      className="skill-card skill-card-sentence-lab"
+                      onClick={() => setShowSentenceLab(true)}
+                    >
+                      <div className="skill-card-icon">
+                        <Languages size={32} />
+                      </div>
+                      <div className="skill-card-content">
+                        <h3>Sentence Lab</h3>
+                        <p>Kucuk cumlelerle yapi, grammar ve punctuation calis</p>
+                      </div>
+                      <div className="skill-card-arrow">â†’</div>
+                    </button>
                   </div>
 
                   {/* Floating Config Status */}
@@ -1202,6 +1227,11 @@ function App() {
       {showGrammarLessons && (
         <GrammarLessons onClose={() => setShowGrammarLessons(false)} />
       )}
+
+      <SentenceLab
+        isOpen={showSentenceLab}
+        onClose={() => setShowSentenceLab(false)}
+      />
     </div>
   );
 }
