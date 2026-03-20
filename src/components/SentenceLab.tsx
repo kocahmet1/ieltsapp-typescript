@@ -70,6 +70,40 @@ const getAccuracy = (stats: SentenceLabStats) => (
     : 0
 );
 
+const shuffleArray = <T,>(items: T[]) => {
+  const shuffled = [...items];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+  }
+
+  return shuffled;
+};
+
+const scrambleArray = <T,>(items: T[]) => {
+  if (items.length <= 1) {
+    return [...items];
+  }
+
+  if (items.length === 2) {
+    return [items[1], items[0]];
+  }
+
+  let candidate = [...items];
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    candidate = shuffleArray(items);
+    const movedCount = candidate.filter((item, index) => item !== items[index]).length;
+
+    if (movedCount >= 2) {
+      return candidate;
+    }
+  }
+
+  return [...items].reverse();
+};
+
 export function SentenceLab({ isOpen, onClose }: SentenceLabProps) {
   const [viewMode, setViewMode] = useState<SentenceLabViewMode>('overview');
   const [activeType, setActiveType] = useState<SentenceLabExerciseType | null>(null);
@@ -83,10 +117,29 @@ export function SentenceLab({ isOpen, onClose }: SentenceLabProps) {
   const [attempts, setAttempts] = useState<SentenceLabAttempt[]>([]);
   const [stats, setStats] = useState<SentenceLabStats>(getSentenceLabStats());
   const [showHints, setShowHints] = useState(false);
+  const [shuffleVersion, setShuffleVersion] = useState(0);
 
   const activeExercises = activeType ? EXERCISES_BY_TYPE[activeType] : [];
   const currentExercise = currentIndex < activeExercises.length ? activeExercises[currentIndex] : null;
   const isSessionComplete = Boolean(activeType) && currentIndex >= activeExercises.length;
+  const shuffledBuilderChunks = useMemo(() => {
+    if (!currentExercise || currentExercise.type !== 'sentence_builder') {
+      return [];
+    }
+
+    return scrambleArray(
+      currentExercise.chunks.map((chunk, originalIndex) => ({ chunk, originalIndex }))
+    );
+  }, [currentExercise, shuffleVersion]);
+  const shuffledWordBank = useMemo(() => {
+    if (!currentExercise || !('wordBank' in currentExercise) || !currentExercise.wordBank) {
+      return [];
+    }
+
+    return scrambleArray(
+      currentExercise.wordBank.map((word, index) => ({ word, originalIndex: index }))
+    );
+  }, [currentExercise, shuffleVersion]);
 
   const weakestFocus = useMemo(() => {
     if (stats.focusStats.length === 0) {
@@ -137,6 +190,7 @@ export function SentenceLab({ isOpen, onClose }: SentenceLabProps) {
     setActiveType(type);
     setCurrentIndex(0);
     setSessionResults([]);
+    setShuffleVersion((prev) => prev + 1);
     setViewMode('practice');
     resetInputs(exercises[0] || null);
   };
@@ -165,6 +219,7 @@ export function SentenceLab({ isOpen, onClose }: SentenceLabProps) {
     const nextIndex = currentIndex + 1;
     const nextExercise = activeExercises[nextIndex] || null;
     setCurrentIndex(nextIndex);
+    setShuffleVersion((prev) => prev + 1);
     resetInputs(nextExercise);
   };
 
@@ -175,6 +230,7 @@ export function SentenceLab({ isOpen, onClose }: SentenceLabProps) {
 
     setCurrentIndex(0);
     setSessionResults([]);
+    setShuffleVersion((prev) => prev + 1);
     resetInputs(activeExercises[0] || null);
     setViewMode('practice');
   };
@@ -240,6 +296,7 @@ export function SentenceLab({ isOpen, onClose }: SentenceLabProps) {
   };
 
   const handleRetryCurrent = () => {
+    setShuffleVersion((prev) => prev + 1);
     resetInputs(currentExercise);
   };
 
@@ -302,9 +359,9 @@ export function SentenceLab({ isOpen, onClose }: SentenceLabProps) {
 
   const renderWordBank = (words: string[], onInsert: (word: string) => void) => (
     <div className="sentence-lab-word-bank">
-      {words.map((word) => (
+      {words.map((word, index) => (
         <button
-          key={word}
+          key={`${word}-${index}`}
           type="button"
           className="sentence-lab-word-pill"
           onClick={() => onInsert(word)}
@@ -346,15 +403,15 @@ export function SentenceLab({ isOpen, onClose }: SentenceLabProps) {
             </div>
 
             <div className="sentence-lab-bank-grid">
-              {currentExercise.chunks.map((chunk, index) => {
-                const isUsed = selectedChunkIndexes.includes(index);
+              {shuffledBuilderChunks.map(({ chunk, originalIndex }) => {
+                const isUsed = selectedChunkIndexes.includes(originalIndex);
 
                 return (
                   <button
-                    key={`${chunk}-${index}`}
+                    key={`${chunk}-${originalIndex}`}
                     type="button"
                     className={`sentence-lab-bank-chunk ${isUsed ? 'is-used' : ''}`}
-                    onClick={() => handleSelectChunk(index)}
+                    onClick={() => handleSelectChunk(originalIndex)}
                     disabled={isUsed || Boolean(evaluation)}
                   >
                     {chunk}
@@ -376,7 +433,7 @@ export function SentenceLab({ isOpen, onClose }: SentenceLabProps) {
               placeholder="Write the English sentence here."
               disabled={Boolean(evaluation)}
             />
-            {renderWordBank(currentExercise.wordBank, handleTextWordInsert)}
+            {renderWordBank(shuffledWordBank.map((item) => item.word), handleTextWordInsert)}
           </div>
         );
 
@@ -401,7 +458,7 @@ export function SentenceLab({ isOpen, onClose }: SentenceLabProps) {
                 </div>
               ))}
             </div>
-            {currentExercise.wordBank && renderWordBank(currentExercise.wordBank, handleBlankWordInsert)}
+            {currentExercise.wordBank && renderWordBank(shuffledWordBank.map((item) => item.word), handleBlankWordInsert)}
           </div>
         );
       }

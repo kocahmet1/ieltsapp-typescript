@@ -30,6 +30,48 @@ export const sentenceLabExercises: SentenceLabExercise[] = [
     hints: ['This is a past action.', 'The noun phrase is "the bus".']
   },
   {
+    id: 'sl-builder-3',
+    type: 'sentence_builder',
+    title: 'Museum Plan',
+    level: 'elementary',
+    instructions: 'Put the chunks in order to make one correct future sentence.',
+    turkishPrompt: 'Biz yarin muzeyi ziyaret edecegiz.',
+    focusAreas: ['word_order', 'grammar', 'tense'],
+    chunks: ['We', 'will', 'visit', 'the', 'museum', 'tomorrow.'],
+    correctOrder: ['We', 'will', 'visit', 'the', 'museum', 'tomorrow.'],
+    modelAnswer: 'We will visit the museum tomorrow.',
+    explanation: 'Use will + base verb for a future plan stated like this.',
+    hints: ['Start with the subject.', 'Use "will" before the base verb.']
+  },
+  {
+    id: 'sl-builder-4',
+    type: 'sentence_builder',
+    title: 'Daily Commute',
+    level: 'elementary',
+    instructions: 'Arrange the chunks to make a natural sentence.',
+    turkishPrompt: 'O ise trenle gider.',
+    focusAreas: ['word_order', 'grammar', 'prepositions'],
+    chunks: ['He', 'goes', 'to', 'work', 'by', 'train.'],
+    correctOrder: ['He', 'goes', 'to', 'work', 'by', 'train.'],
+    modelAnswer: 'He goes to work by train.',
+    explanation: '"Go to work" and "by train" are fixed patterns in English.',
+    hints: ['The place phrase is "to work".', 'The transport phrase comes at the end.']
+  },
+  {
+    id: 'sl-builder-5',
+    type: 'sentence_builder',
+    title: 'Garden Activity',
+    level: 'starter',
+    instructions: 'Arrange the chunks to make one correct sentence.',
+    turkishPrompt: 'Cocuklar bahcede oynuyor.',
+    focusAreas: ['word_order', 'grammar', 'tense'],
+    chunks: ['The', 'children', 'are', 'playing', 'in', 'the', 'garden.'],
+    correctOrder: ['The', 'children', 'are', 'playing', 'in', 'the', 'garden.'],
+    modelAnswer: 'The children are playing in the garden.',
+    explanation: 'Present continuous uses be + verb-ing.',
+    hints: ['You need "are" before the -ing verb.', 'The place phrase is "in the garden".']
+  },
+  {
     id: 'sl-guided-1',
     type: 'guided_translation',
     title: 'Late Arrival',
@@ -59,6 +101,54 @@ export const sentenceLabExercises: SentenceLabExercise[] = [
     ],
     explanation: '"Go for a walk" is more natural than translating each Turkish word directly.',
     hints: ['Use a natural English collocation.', 'The place phrase is "in the park".']
+  },
+  {
+    id: 'sl-guided-3',
+    type: 'guided_translation',
+    title: 'Before Breakfast',
+    level: 'elementary',
+    instructions: 'Translate the sentence into English. Use the word bank if you need help.',
+    turkishPrompt: 'O her zaman kahvaltidan once dislerini fircalar.',
+    focusAreas: ['grammar', 'word_order', 'naturalness'],
+    wordBank: ['She', 'always', 'brushes', 'her', 'teeth', 'before', 'breakfast'],
+    modelAnswer: 'She always brushes her teeth before breakfast.',
+    acceptedAnswers: ['She always brushes her teeth before breakfast.'],
+    explanation: '"Brush your teeth" is a fixed expression, and frequency adverbs often come before the main verb.',
+    hints: ['Use simple present.', 'Put "always" before the main verb.']
+  },
+  {
+    id: 'sl-guided-4',
+    type: 'guided_translation',
+    title: 'Rainy Day',
+    level: 'pre_intermediate',
+    instructions: 'Translate the sentence into English. Try to keep the reason clear.',
+    turkishPrompt: 'Bugun semsiyemi almaliyim cunku yagmur yagiyor.',
+    focusAreas: ['grammar', 'connectors', 'tense'],
+    wordBank: ['I', 'need', 'to', 'take', 'my', 'umbrella', 'today', 'because', 'it', 'is', 'raining'],
+    modelAnswer: 'I need to take my umbrella today because it is raining.',
+    acceptedAnswers: [
+      'I need to take my umbrella today because it is raining.',
+      'I need to take my umbrella because it is raining today.'
+    ],
+    explanation: 'Use "need to" for necessity and present continuous for the weather now.',
+    hints: ['Use "because" to give the reason.', 'The weather action is happening now.']
+  },
+  {
+    id: 'sl-guided-5',
+    type: 'guided_translation',
+    title: 'Library Voice',
+    level: 'elementary',
+    instructions: 'Translate the sentence into English in a natural way.',
+    turkishPrompt: 'Kutuphanede sessiz konusmaliyiz.',
+    focusAreas: ['grammar', 'naturalness', 'prepositions'],
+    wordBank: ['We', 'should', 'speak', 'quietly', 'in', 'the', 'library'],
+    modelAnswer: 'We should speak quietly in the library.',
+    acceptedAnswers: [
+      'We should speak quietly in the library.',
+      'We should talk quietly in the library.'
+    ],
+    explanation: 'Use "should" for advice or rules, and "quietly" is the adverb form.',
+    hints: ['Use "should" plus the base verb.', 'The place phrase is "in the library".']
   },
   {
     id: 'sl-partial-1',
@@ -91,6 +181,51 @@ export const sentenceLabExercises: SentenceLabExercise[] = [
     hints: ['Think about a finished past action.']
   },
   {
+    id: 'sl-partial-3',
+    type: 'partial_translation',
+    title: 'Every Friday',
+    level: 'starter',
+    instructions: 'Complete the sentence with the correct verb.',
+    turkishPrompt: 'Biz her cuma futbol oynariz.',
+    focusAreas: ['grammar', 'tense'],
+    template: 'We ___ football every Friday.',
+    blankAnswers: [['play']],
+    wordBank: ['play'],
+    modelAnswer: 'We play football every Friday.',
+    explanation: 'For routines, use simple present with the base verb after "we".',
+    hints: ['This is a routine.', 'Use the base verb.']
+  },
+  {
+    id: 'sl-partial-4',
+    type: 'partial_translation',
+    title: 'Can You Help?',
+    level: 'starter',
+    instructions: 'Fill in the missing helper verb.',
+    turkishPrompt: 'Bana bu canta icin yardim edebilir misin?',
+    focusAreas: ['grammar', 'questions'],
+    template: '___ you help me with this bag?',
+    blankAnswers: [['Can']],
+    wordBank: ['Can'],
+    modelAnswer: 'Can you help me with this bag?',
+    explanation: 'Questions with ability or requests often start with "Can".',
+    hints: ['This sentence is a question.']
+  },
+  {
+    id: 'sl-partial-5',
+    type: 'partial_translation',
+    title: 'At the Moment',
+    level: 'elementary',
+    instructions: 'Complete the sentence with the present continuous form.',
+    turkishPrompt: 'Onlar su anda aksam yemegi hazirliyor.',
+    focusAreas: ['grammar', 'tense'],
+    template: 'They ___ ___ dinner at the moment.',
+    blankAnswers: [['are'], ['making']],
+    wordBank: ['making', 'are'],
+    modelAnswer: 'They are making dinner at the moment.',
+    explanation: '"At the moment" signals present continuous: are + verb-ing.',
+    hints: ['Use an auxiliary plus -ing form.', 'Start with "are".']
+  },
+  {
     id: 'sl-error-1',
     type: 'error_correction',
     title: 'Very vs Well',
@@ -119,6 +254,48 @@ export const sentenceLabExercises: SentenceLabExercise[] = [
     hints: ['The time expression is in the past.', 'Use the past form of "buy".']
   },
   {
+    id: 'sl-error-3',
+    type: 'error_correction',
+    title: 'Missing Article',
+    level: 'elementary',
+    instructions: 'Correct the sentence so it sounds natural and accurate.',
+    turkishPrompt: 'Ben dun yeni bir telefon aldim.',
+    focusAreas: ['articles', 'grammar', 'tense'],
+    incorrectSentence: 'I bought new phone yesterday.',
+    modelAnswer: 'I bought a new phone yesterday.',
+    acceptedAnswers: ['I bought a new phone yesterday.'],
+    explanation: 'Countable singular nouns need an article here: "a new phone".',
+    hints: ['One noun is missing an article.', 'The tense is already past simple.']
+  },
+  {
+    id: 'sl-error-4',
+    type: 'error_correction',
+    title: 'Question Order',
+    level: 'elementary',
+    instructions: 'Fix the word order in the question.',
+    turkishPrompt: 'Sen simdi nereye gidiyorsun?',
+    focusAreas: ['questions', 'word_order', 'grammar'],
+    incorrectSentence: 'Where you are going now?',
+    modelAnswer: 'Where are you going now?',
+    acceptedAnswers: ['Where are you going now?'],
+    explanation: 'In English questions, the auxiliary comes before the subject.',
+    hints: ['Move the auxiliary before "you".', 'Keep the -ing verb form.']
+  },
+  {
+    id: 'sl-error-5',
+    type: 'error_correction',
+    title: 'Afraid Of',
+    level: 'elementary',
+    instructions: 'Correct the preposition and make the sentence natural.',
+    turkishPrompt: 'O kopeklerden korkar.',
+    focusAreas: ['prepositions', 'grammar', 'naturalness'],
+    incorrectSentence: 'She is afraid from dogs.',
+    modelAnswer: 'She is afraid of dogs.',
+    acceptedAnswers: ['She is afraid of dogs.'],
+    explanation: 'The fixed expression is "afraid of", not "afraid from".',
+    hints: ['Check the preposition after "afraid".']
+  },
+  {
     id: 'sl-punctuation-1',
     type: 'punctuation_repair',
     title: 'Tag Question',
@@ -143,6 +320,45 @@ export const sentenceLabExercises: SentenceLabExercise[] = [
     acceptedAnswers: ['When did you finish your project?'],
     explanation: 'Questions start with a capital letter and end with a question mark.',
     hints: ['This is a question sentence.']
+  },
+  {
+    id: 'sl-punctuation-3',
+    type: 'punctuation_repair',
+    title: 'City and Job',
+    level: 'elementary',
+    instructions: 'Rewrite the sentence with correct capitalization and punctuation.',
+    focusAreas: ['punctuation', 'naturalness'],
+    rawSentence: 'my brother lives in izmir and he works in a bank',
+    modelAnswer: 'My brother lives in Izmir, and he works in a bank.',
+    acceptedAnswers: ['My brother lives in Izmir, and he works in a bank.'],
+    explanation: 'Capitalize the first word and the city name, then separate the clauses with a comma.',
+    hints: ['City names need capitals.', 'Add a comma before the second clause.']
+  },
+  {
+    id: 'sl-punctuation-4',
+    type: 'punctuation_repair',
+    title: 'Laughing Question',
+    level: 'starter',
+    instructions: 'Add the missing capitalization and punctuation.',
+    focusAreas: ['punctuation', 'questions'],
+    rawSentence: 'why are they laughing',
+    modelAnswer: 'Why are they laughing?',
+    acceptedAnswers: ['Why are they laughing?'],
+    explanation: 'Questions start with a capital letter and end with a question mark.',
+    hints: ['This is a question sentence.']
+  },
+  {
+    id: 'sl-punctuation-5',
+    type: 'punctuation_repair',
+    title: 'Can She Come?',
+    level: 'elementary',
+    instructions: 'Repair the capitals, apostrophe, comma, and question mark.',
+    focusAreas: ['punctuation', 'questions'],
+    rawSentence: 'sarah cant come today can she',
+    modelAnswer: 'Sarah can\'t come today, can she?',
+    acceptedAnswers: ['Sarah can\'t come today, can she?'],
+    explanation: 'Use the apostrophe in "can\'t", capitalize the name, and mark the tag question correctly.',
+    hints: ['Names need capitals.', 'Tag questions need a comma and question mark.']
   },
   {
     id: 'sl-transform-1',
@@ -171,6 +387,48 @@ export const sentenceLabExercises: SentenceLabExercise[] = [
     acceptedAnswers: ['Were they studying in the library?'],
     explanation: 'With "were", the auxiliary moves before the subject to form a question.',
     hints: ['Move the auxiliary to the front.', 'Keep the -ing verb form.']
+  },
+  {
+    id: 'sl-transform-3',
+    type: 'sentence_transformation',
+    title: 'Past Negative',
+    level: 'elementary',
+    instructions: 'Rewrite the sentence in the requested form.',
+    focusAreas: ['grammar', 'tense'],
+    sourceSentence: 'He finished his project on time.',
+    transformationInstruction: 'Turn it into a negative sentence.',
+    modelAnswer: 'He didn\'t finish his project on time.',
+    acceptedAnswers: ['He didn\'t finish his project on time.', 'He did not finish his project on time.'],
+    explanation: 'Past simple negative uses did not / didn\'t + base verb.',
+    hints: ['Use "didn\'t".', 'The main verb returns to base form.']
+  },
+  {
+    id: 'sl-transform-4',
+    type: 'sentence_transformation',
+    title: 'Can Question',
+    level: 'starter',
+    instructions: 'Rewrite the sentence as a yes/no question.',
+    focusAreas: ['questions', 'word_order', 'grammar'],
+    sourceSentence: 'You can swim very fast.',
+    transformationInstruction: 'Turn it into a yes/no question.',
+    modelAnswer: 'Can you swim very fast?',
+    acceptedAnswers: ['Can you swim very fast?'],
+    explanation: 'With modal verbs like "can", move the modal before the subject.',
+    hints: ['Put "can" first.', 'Keep the main verb in base form.']
+  },
+  {
+    id: 'sl-transform-5',
+    type: 'sentence_transformation',
+    title: 'Train Question',
+    level: 'elementary',
+    instructions: 'Rewrite the sentence as a yes/no question.',
+    focusAreas: ['questions', 'word_order', 'grammar'],
+    sourceSentence: 'The train leaves at six.',
+    transformationInstruction: 'Turn it into a yes/no question.',
+    modelAnswer: 'Does the train leave at six?',
+    acceptedAnswers: ['Does the train leave at six?'],
+    explanation: 'Present simple questions need does + subject + base verb.',
+    hints: ['Use "does" at the start.', 'Change "leaves" back to "leave".']
   },
   {
     id: 'sl-combine-1',
@@ -207,6 +465,51 @@ export const sentenceLabExercises: SentenceLabExercise[] = [
     hints: ['One clause gives the reason.', 'Either order can work if punctuation is correct.']
   },
   {
+    id: 'sl-combine-3',
+    type: 'sentence_combining',
+    title: 'When',
+    level: 'elementary',
+    instructions: 'Combine the two ideas into one sentence using the given connector.',
+    focusAreas: ['connectors', 'grammar', 'word_order'],
+    sourceSentences: ['Call me.', 'You arrive at the station.'],
+    connector: 'when',
+    modelAnswer: 'Call me when you arrive at the station.',
+    acceptedAnswers: [
+      'Call me when you arrive at the station.',
+      'When you arrive at the station, call me.'
+    ],
+    explanation: '"When" links one action to the time of another action.',
+    hints: ['One action happens after the other.', 'Either clause can come first if punctuation is correct.']
+  },
+  {
+    id: 'sl-combine-4',
+    type: 'sentence_combining',
+    title: 'But',
+    level: 'elementary',
+    instructions: 'Join the two ideas with "but".',
+    focusAreas: ['connectors', 'grammar', 'word_order'],
+    sourceSentences: ['I wanted to go out.', 'It was too late.'],
+    connector: 'but',
+    modelAnswer: 'I wanted to go out, but it was too late.',
+    acceptedAnswers: ['I wanted to go out, but it was too late.'],
+    explanation: '"But" introduces contrast between two ideas.',
+    hints: ['Show contrast.', 'Use a comma before "but".']
+  },
+  {
+    id: 'sl-combine-5',
+    type: 'sentence_combining',
+    title: 'So',
+    level: 'elementary',
+    instructions: 'Combine the ideas into one sentence using "so".',
+    focusAreas: ['connectors', 'grammar'],
+    sourceSentences: ['She was tired.', 'She went to bed early.'],
+    connector: 'so',
+    modelAnswer: 'She was tired, so she went to bed early.',
+    acceptedAnswers: ['She was tired, so she went to bed early.'],
+    explanation: '"So" shows a result. The first clause gives the cause and the second clause gives the result.',
+    hints: ['The second clause is the result.', 'Use a comma before "so".']
+  },
+  {
     id: 'sl-situation-1',
     type: 'situation_response',
     title: 'Message a Friend',
@@ -241,5 +544,57 @@ export const sentenceLabExercises: SentenceLabExercise[] = [
     ],
     explanation: 'For requests, "Could I...?" sounds more polite than a direct command.',
     hints: ['Start with "Could I...?"', 'End politely.']
+  },
+  {
+    id: 'sl-situation-3',
+    type: 'situation_response',
+    title: 'Order Water',
+    level: 'starter',
+    instructions: 'Write one polite sentence.',
+    focusAreas: ['grammar', 'naturalness', 'punctuation'],
+    scenario: 'Restoranda garsona biraz su istedigini soyle.',
+    requirements: ['Be polite.', 'Ask for water.', 'Write one complete sentence.'],
+    modelAnswer: 'Could I have some water, please?',
+    acceptedAnswers: [
+      'Could I have some water, please?',
+      'Can I have some water, please?'
+    ],
+    explanation: 'In simple service situations, "Could I have...?" sounds polite and natural.',
+    hints: ['Start with "Could I have...?"', 'End politely.']
+  },
+  {
+    id: 'sl-situation-4',
+    type: 'situation_response',
+    title: 'Ask the Way',
+    level: 'elementary',
+    instructions: 'Write one useful question.',
+    focusAreas: ['questions', 'naturalness', 'punctuation'],
+    scenario: 'Birine otobus duraginin nerede oldugunu sor.',
+    requirements: ['Be polite.', 'Ask for the location.', 'Use one question sentence.'],
+    modelAnswer: 'Excuse me, where is the bus stop?',
+    acceptedAnswers: [
+      'Excuse me, where is the bus stop?',
+      'Where is the bus stop?'
+    ],
+    explanation: 'A short polite question is often better than a literal translation.',
+    hints: ['Use "Excuse me" if you want.', 'This should end with a question mark.']
+  },
+  {
+    id: 'sl-situation-5',
+    type: 'situation_response',
+    title: 'Tell Your Teacher',
+    level: 'pre_intermediate',
+    instructions: 'Write one clear sentence for this situation.',
+    focusAreas: ['grammar', 'naturalness', 'punctuation'],
+    scenario: 'Ogretmenine odevi bitiremedigini ama yarin getirecegini yaz.',
+    requirements: ['Say you could not finish it.', 'Say you will bring it tomorrow.', 'Write one complete sentence.'],
+    modelAnswer: 'I\'m sorry, I couldn\'t finish the homework, but I will bring it tomorrow.',
+    acceptedAnswers: [
+      'I\'m sorry, I couldn\'t finish the homework, but I will bring it tomorrow.',
+      'I am sorry, I could not finish the homework, but I will bring it tomorrow.',
+      'I couldn\'t finish the homework, but I will bring it tomorrow.'
+    ],
+    explanation: 'For a teacher, a short apology plus a clear follow-up plan sounds responsible and natural.',
+    hints: ['You can start with "I\'m sorry".', 'Use "but" to add what you will do next.']
   }
 ];
