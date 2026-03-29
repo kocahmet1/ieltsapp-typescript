@@ -867,11 +867,11 @@ function applyHighlight(fragment: string): void {
 async function handlePassageSelection(event: Event): Promise<void> {
   const selection = window.getSelection();
   const selectedText = selection?.toString().trim() ?? '';
-  if (!selectedText || selectedText.length > 32) {
+  if (!selectedText || selectedText.length > 500) {
     return;
   }
 
-  elements.translatedWord.textContent = 'Translating...';
+  elements.translatedWord.textContent = 'Çevriliyor...';
   positionTranslationModal(event);
 
   try {
@@ -890,7 +890,12 @@ async function handlePassageSelection(event: Event): Promise<void> {
       throw new Error(payload.error ?? 'Translation failed.');
     }
 
-    elements.translatedWord.textContent = `${selectedText}: ${payload.translation ?? ''}`;
+    const isSentence = selectedText.length > 40;
+    if (isSentence) {
+      elements.translatedWord.textContent = payload.translation ?? '';
+    } else {
+      elements.translatedWord.textContent = `${selectedText}: ${payload.translation ?? ''}`;
+    }
     positionTranslationModal(event);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Translation failed.';

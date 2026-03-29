@@ -287,7 +287,11 @@ async function handleTranslate(req, res) {
     return sendJson(res, 500, { error: 'No Gemini API key available' });
   }
 
-  const prompt = `Translate the English word '${word}' to Turkish. Return only the Turkish translation.`;
+  const isSentence = word.split(/\s+/).length > 5;
+  const prompt = isSentence
+    ? `Translate the following English text to Turkish. Return only the Turkish translation, nothing else.\n\n"${word}"`
+    : `Translate the English word '${word}' to Turkish. If the word has multiple common meanings, give the top 2-3 separated by commas. Return only the Turkish translation(s), nothing else.`;
+
   const text = await callGeminiText({
     apiKey,
     model: config.translationModel,
@@ -295,7 +299,7 @@ async function handleTranslate(req, res) {
     generationConfig: {
       temperature: 0.2,
       topP: 0.95,
-      maxOutputTokens: 50,
+      maxOutputTokens: isSentence ? 300 : 80,
     },
   });
 

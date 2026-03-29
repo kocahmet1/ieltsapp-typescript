@@ -251,7 +251,10 @@ async function handleTranslate(req, res) {
     if (!apiKey) {
         return sendJson(res, 500, { error: 'No Gemini API key available' });
     }
-    const prompt = `Translate the English word '${word}' to Turkish. Return only the Turkish translation.`;
+    const isSentence = word.split(/\s+/).length > 5;
+    const prompt = isSentence
+        ? `Translate the following English text to Turkish. Return only the Turkish translation, nothing else.\n\n"${word}"`
+        : `Translate the English word '${word}' to Turkish. If the word has multiple common meanings, give the top 2-3 separated by commas. Return only the Turkish translation(s), nothing else.`;
     const text = await callGeminiText({
         apiKey,
         model: config.translationModel,
@@ -259,7 +262,7 @@ async function handleTranslate(req, res) {
         generationConfig: {
             temperature: 0.2,
             topP: 0.95,
-            maxOutputTokens: 50,
+            maxOutputTokens: isSentence ? 300 : 80,
         },
     });
     sendJson(res, 200, { word, translation: text.trim() });
@@ -308,7 +311,7 @@ function mixedPrompt() {
     return `Generate an IELTS Academic reading practice set as JSON.
 
 Return a JSON object with:
-- passage: a reading passage of 800-1000 words.
+- passage: a reading passage of 800-1000 words. Separate each paragraph with a blank line (two newlines \\n\\n). The passage must have at least 4 clearly separated paragraphs.
 - questions: an array with 10 items.
 - question_type: exactly \"mixed_fitb_tfng\".
 
@@ -335,7 +338,7 @@ function matchingHeadingsPrompt() {
     return `Generate an IELTS Matching Headings reading practice set as JSON.
 
 Return a JSON object with:
-- passage: a 600-900 word passage.
+- passage: a 600-900 word passage. Separate each paragraph with a blank line (two newlines \\n\\n). The passage must have at least 3 clearly separated paragraphs.
 - paragraphs: an array of 3 to 5 paragraph objects with id and content.
 - headings: an array with 2 or 3 more headings than paragraphs. Each heading needs id and text.
 - answers: an object mapping paragraph ids to heading ids.
