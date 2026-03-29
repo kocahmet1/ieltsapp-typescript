@@ -25,7 +25,8 @@ const config = {
   sessionSecret: process.env.SESSION_SECRET || 'development-session-secret',
   geminiApiKey: process.env.GEMINI_API_KEY || '',
   generationModel: process.env.GEMINI_GENERATION_MODEL || 'gemini-2.5-flash',
-  translationModel: process.env.GEMINI_TRANSLATION_MODEL || 'gemini-2.0-flash',
+  openaiApiKey: process.env.OPENAI_API_KEY || '',
+  openaiTranslationModel: process.env.OPENAI_TRANSLATION_MODEL || 'gpt-4o-mini',
 };
 
 ensureDirectory(dataRoot);
@@ -54,10 +55,10 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && requestUrl.pathname === '/api/register') {
-      return handleRegister(req, res);
+      return await handleRegister(req, res);
     }
     if (req.method === 'POST' && requestUrl.pathname === '/api/login') {
-      return handleLogin(req, res);
+      return await handleLogin(req, res);
     }
     if (req.method === 'POST' && requestUrl.pathname === '/api/logout') {
       return handleLogout(res);
@@ -66,13 +67,13 @@ const server = http.createServer(async (req, res) => {
       return handleCurrentUser(req, res);
     }
     if (req.method === 'POST' && requestUrl.pathname === '/api/save_progress') {
-      return handleSaveProgress(req, res);
+      return await handleSaveProgress(req, res);
     }
     if (req.method === 'GET' && requestUrl.pathname === '/api/get_progress') {
       return handleGetProgress(req, res);
     }
     if (req.method === 'POST' && requestUrl.pathname === '/api/generate') {
-      return handleGenerate(req, res, requestUrl);
+      return await handleGenerate(req, res, requestUrl);
     }
     if (req.method === 'GET' && requestUrl.pathname === '/api/job-status') {
       return handleJobStatus(res, requestUrl);
@@ -80,8 +81,11 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && requestUrl.pathname === '/api/practice-set') {
       return handlePracticeSet(res, requestUrl);
     }
+    if (req.method === 'GET' && requestUrl.pathname === '/api/practice-sets') {
+      return handleListPracticeSets(res);
+    }
     if (req.method === 'POST' && requestUrl.pathname === '/api/translate') {
-      return handleTranslate(req, res);
+      return await handleTranslate(req, res);
     }
 
     sendJson(res, 404, { error: 'Not found' });
@@ -275,35 +279,98 @@ function handlePracticeSet(res, requestUrl) {
   sendJson(res, 200, { ...practiceSet, shareUrl: `${baseUrl}/?id=${practiceSetId}` });
 }
 
+function handleListPracticeSets(res) {
+  const files = fs.readdirSync(practiceSetsDir).filter((f) => f.endsWith('.json'));
+  const items = [];
+
+  for (const file of files) {
+    const practiceSet = readJson(path.join(practiceSetsDir, file), null);
+    if (!practiceSet || !practiceSet.id) continue;
+
+    const passagePreview = (practiceSet.passage || '').replace(/\n+/g, ' ').slice(0, 200);
+    items.push({
+      id: practiceSet.id,
+      question_type: practiceSet.question_type || 'mixed_fitb_tfng',
+      created_at: practiceSet.created_at || null,
+      passage_preview: passagePreview,
+    });
+  }
+
+  items.sort((a, b) => {
+    const dateA = a.created_at || '';
+    const dateB = b.created_at || '';
+    return dateB.localeCompare(dateA);
+  });
+
+  sendJson(res, 200, items);
+}
+
 async function handleTranslate(req, res) {
   const body = await readJsonBody(req);
   const word = String(body.word || '').trim();
-  const apiKey = String(body.apiKey || '').trim() || config.geminiApiKey;
+  const apiKey = String(body.openaiApiKey || '').trim() || config.openaiApiKey;
 
   if (!word) {
     return sendJson(res, 400, { error: 'No word provided' });
   }
   if (!apiKey) {
-    return sendJson(res, 500, { error: 'No Gemini API key available' });
+    return sendJson(res, 500, { error: 'No OpenAI API key available. Please set one in API Key Settings.' });
   }
 
   const isSentence = word.split(/\s+/).length > 5;
-  const prompt = isSentence
-    ? `Translate the following English text to Turkish. Return only the Turkish translation, nothing else.\n\n"${word}"`
-    : `Translate the English word '${word}' to Turkish. If the word has multiple common meanings, give the top 2-3 separated by commas. Return only the Turkish translation(s), nothing else.`;
+  const systemPrompt = isSentence
+    ? 'You are a translator. Translate the given English text to Turkish. Return only the Turkish translation, nothing else.'
+    : 'You are a translator. Translate the given English word to Turkish. If the word has multiple common meanings, give the top 2-3 separated by commas. Return only the Turkish translation(s), nothing else.';
 
-  const text = await callGeminiText({
-    apiKey,
-    model: config.translationModel,
-    prompt,
-    generationConfig: {
+  try {
+    const translation = await callOpenAiChat({
+      apiKey: apiKey,
+      model: config.openaiTranslationModel,
+      systemPrompt,
+      userMessage: word,
       temperature: 0.2,
-      topP: 0.95,
-      maxOutputTokens: isSentence ? 300 : 80,
+      maxTokens: isSentence ? 300 : 80,
+    });
+
+    sendJson(res, 200, { word, translation: translation.trim() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Translation failed';
+    if (message.includes('429')) {
+      return sendJson(res, 429, { error: 'API kota sınırına ulaşıldı. Lütfen birkaç saniye bekleyip tekrar deneyin.' });
+    }
+    sendJson(res, 500, { error: message });
+  }
+}
+
+async function callOpenAiChat({ apiKey, model, systemPrompt, userMessage, temperature, maxTokens }) {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
     },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage },
+      ],
+      temperature,
+      max_tokens: maxTokens,
+    }),
   });
 
-  sendJson(res, 200, { word, translation: text.trim() });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenAI request failed with ${response.status}: ${errorText}`);
+  }
+
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content || '';
+  if (!text) {
+    throw new Error('OpenAI returned no text output.');
+  }
+  return text;
 }
 
 async function generatePracticeJob({ jobId, apiKey, questionType, baseUrl }) {

@@ -4,6 +4,7 @@ const state = {
     practiceId: null,
     currentUser: null,
     activeTab: 'mh',
+    highlighterActive: false,
     fitbResults: new Map(),
     tfngResults: new Map(),
     lastSavedScores: {
@@ -67,6 +68,17 @@ const elements = {
     translatedWord: byId('translatedWord'),
     closeTranslation: byId('closeTranslation'),
     shareUrlContainer: byId('shareUrlContainer'),
+    openaiApiKeyInput: byId('openaiApiKeyInput'),
+    saveOpenaiKeyBtn: byId('saveOpenaiKeyBtn'),
+    openaiKeyStatus: byId('openaiKeyStatus'),
+    historyBtn: byId('historyBtn'),
+    historyDrawer: byId('historyDrawer'),
+    historyBackdrop: byId('historyBackdrop'),
+    historyCloseBtn: byId('historyCloseBtn'),
+    historyList: byId('historyList'),
+    historyCount: byId('historyCount'),
+    highlighterToggleBtn: byId('highlighterToggleBtn'),
+    clearHighlighterBtn: byId('clearHighlighterBtn'),
 };
 initialize().catch((error) => {
     console.error(error);
@@ -75,6 +87,7 @@ initialize().catch((error) => {
 async function initialize() {
     bindEvents();
     loadSavedApiKey();
+    loadSavedOpenaiKey();
     updateAuthUi({ isLoggedIn: false });
     const url = new URL(window.location.href);
     const practiceId = url.searchParams.get('id');
@@ -88,6 +101,7 @@ function bindEvents() {
     });
     elements.apiKeyToggleBtn.addEventListener('click', toggleApiKeySection);
     elements.saveApiKeyBtn.addEventListener('click', saveApiKey);
+    elements.saveOpenaiKeyBtn.addEventListener('click', saveOpenaiKey);
     elements.closeTranslation.addEventListener('click', hideTranslationModal);
     elements.passage.addEventListener('mouseup', (event) => {
         void handlePassageSelection(event);
@@ -117,6 +131,18 @@ function bindEvents() {
     elements.loginForm.addEventListener('submit', (event) => {
         event.preventDefault();
         void loginUser();
+    });
+    elements.historyBtn.addEventListener('click', () => {
+        void openHistoryDrawer();
+    });
+    elements.historyCloseBtn.addEventListener('click', closeHistoryDrawer);
+    elements.historyBackdrop.addEventListener('click', closeHistoryDrawer);
+    elements.highlighterToggleBtn.addEventListener('click', toggleHighlighter);
+    elements.clearHighlighterBtn.addEventListener('click', clearUserHighlights);
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && elements.historyDrawer.classList.contains('open')) {
+            closeHistoryDrawer();
+        }
     });
 }
 function showPanel(panel) {
@@ -246,6 +272,36 @@ function saveApiKey() {
     elements.apiKeyInput.value = '';
     elements.apiKeyStatus.textContent = 'Custom API key saved.';
     elements.apiKeyStatus.className = 'api-key-status success';
+}
+function loadSavedOpenaiKey() {
+    const apiKey = window.localStorage.getItem('openaiApiKey');
+    if (apiKey) {
+        elements.openaiKeyStatus.textContent = 'OpenAI API key is set and will be used for translations.';
+        elements.openaiKeyStatus.className = 'api-key-status success';
+    }
+    else {
+        elements.openaiKeyStatus.textContent = 'No OpenAI API key saved. The server will use its default key if configured.';
+        elements.openaiKeyStatus.className = 'api-key-status';
+    }
+}
+function saveOpenaiKey() {
+    const apiKey = elements.openaiApiKeyInput.value.trim();
+    if (!apiKey) {
+        window.localStorage.removeItem('openaiApiKey');
+        elements.openaiKeyStatus.textContent = 'Saved OpenAI key removed.';
+        elements.openaiKeyStatus.className = 'api-key-status';
+        elements.openaiApiKeyInput.value = '';
+        return;
+    }
+    if (apiKey.length < 20) {
+        elements.openaiKeyStatus.textContent = 'That key looks too short to be valid.';
+        elements.openaiKeyStatus.className = 'api-key-status error';
+        return;
+    }
+    window.localStorage.setItem('openaiApiKey', apiKey);
+    elements.openaiApiKeyInput.value = '';
+    elements.openaiKeyStatus.textContent = 'OpenAI API key saved.';
+    elements.openaiKeyStatus.className = 'api-key-status success';
 }
 function currentGeneratorMode() {
     return elements.generateModeSelect.value === 'mixed_fitb_tfng' ? 'mixed_fitb_tfng' : 'matching_headings';
@@ -702,6 +758,11 @@ async function handlePassageSelection(event) {
     if (!selectedText || selectedText.length > 500) {
         return;
     }
+    // If highlighter is active, apply highlight instead of translating
+    if (state.highlighterActive) {
+        applyUserHighlight();
+        return;
+    }
     elements.translatedWord.textContent = 'Çevriliyor...';
     positionTranslationModal(event);
     try {
@@ -710,7 +771,7 @@ async function handlePassageSelection(event) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 word: selectedText,
-                apiKey: window.localStorage.getItem('geminiApiKey') ?? '',
+                openaiApiKey: window.localStorage.getItem('openaiApiKey') ?? '',
             }),
             credentials: 'same-origin',
         });
@@ -736,8 +797,8 @@ function positionTranslationModal(event) {
     const selection = window.getSelection();
     const rect = selection && selection.rangeCount > 0 ? selection.getRangeAt(0).getBoundingClientRect() : null;
     const mouseEvent = event;
-    const left = rect?.left ?? mouseEvent.clientX;
-    const top = rect?.bottom ?? mouseEvent.clientY;
+    const left = (rect?.left ?? mouseEvent.clientX) + window.scrollX;
+    const top = (rect?.bottom ?? mouseEvent.clientY) + window.scrollY;
     elements.translationModal.style.display = 'block';
     elements.translationModal.style.left = `${left}px`;
     elements.translationModal.style.top = `${top + 8}px`;
@@ -772,4 +833,278 @@ function escapeHtml(value) {
 }
 function escapeAttribute(value) {
     return escapeHtml(value).replaceAll('`', '&#96;');
+}
+async function openHistoryDrawer() {
+    elements.historyDrawer.classList.add('open');
+    elements.historyBackdrop.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    elements.historyList.innerHTML = `
+    <div class="history-loading">
+      <div class="spinner"></div>
+      <p>Loading passages...</p>
+    </div>
+  `;
+    elements.historyCount.textContent = '';
+    try {
+        const response = await fetch('/api/practice-sets', { credentials: 'same-origin' });
+        if (!response.ok) {
+            throw new Error('Failed to fetch passages');
+        }
+        const items = await response.json();
+        renderHistoryList(items);
+    }
+    catch {
+        elements.historyList.innerHTML = `
+      <div class="history-empty">
+        <p>Failed to load passages</p>
+        <span class="hint">Please try again later.</span>
+      </div>
+    `;
+    }
+}
+function closeHistoryDrawer() {
+    elements.historyDrawer.classList.remove('open');
+    elements.historyBackdrop.classList.remove('open');
+    document.body.style.overflow = '';
+}
+function renderHistoryList(items) {
+    if (items.length === 0) {
+        elements.historyCount.textContent = '';
+        elements.historyList.innerHTML = `
+      <div class="history-empty">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        <p>No passages yet</p>
+        <span class="hint">Generate your first practice set to get started!</span>
+      </div>
+    `;
+        return;
+    }
+    elements.historyCount.textContent = `${items.length} passage${items.length !== 1 ? 's' : ''} saved`;
+    elements.historyList.innerHTML = '';
+    let cardIndex = 0;
+    for (const item of items) {
+        const card = document.createElement('div');
+        card.className = 'history-card';
+        card.style.animationDelay = `${cardIndex * 0.06}s`;
+        card.style.opacity = '0';
+        if (state.practiceId === item.id) {
+            card.classList.add('active');
+        }
+        const isMh = item.question_type === 'matching_headings';
+        const badgeClass = isMh ? 'mh' : 'mixed';
+        const badgeText = isMh ? 'Headings' : 'FITB + TFNG';
+        const dateStr = item.created_at ? formatHistoryDate(item.created_at) : 'Unknown date';
+        card.innerHTML = `
+      <div class="history-card-meta">
+        <span class="history-card-date">${escapeHtml(dateStr)}</span>
+        <span class="history-card-badge ${badgeClass}">${badgeText}</span>
+      </div>
+      <div class="history-card-preview">${escapeHtml(item.passage_preview)}${item.passage_preview.length >= 200 ? '...' : ''}</div>
+      <div class="history-card-footer">
+        <span class="history-card-load">
+          Load passage
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </span>
+      </div>
+    `;
+        card.addEventListener('click', () => {
+            void loadHistoryItem(item.id);
+        });
+        elements.historyList.appendChild(card);
+        cardIndex++;
+    }
+}
+async function loadHistoryItem(practiceId) {
+    closeHistoryDrawer();
+    setLoadingHtml(`
+    <p>Loading practice set...</p>
+  `);
+    try {
+        const response = await fetch(`/api/practice-set?id=${encodeURIComponent(practiceId)}`, {
+            credentials: 'same-origin',
+        });
+        if (!response.ok) {
+            throw new Error('Practice set not found');
+        }
+        const practiceSet = await response.json();
+        displayPracticeSet(practiceSet);
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to load practice set.';
+        setLoadingHtml(`<p style="color: #b42318;">${escapeHtml(message)}</p>`);
+    }
+}
+function formatHistoryDate(dateString) {
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) {
+            return dateString;
+        }
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        if (diffMins < 1)
+            return 'Just now';
+        if (diffMins < 60)
+            return `${diffMins} min ago`;
+        if (diffHours < 24)
+            return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+        if (diffDays < 7)
+            return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+        });
+    }
+    catch {
+        return dateString;
+    }
+}
+function toggleHighlighter() {
+    state.highlighterActive = !state.highlighterActive;
+    elements.highlighterToggleBtn.classList.toggle('active', state.highlighterActive);
+    elements.passage.classList.toggle('highlighter-active', state.highlighterActive);
+    // Show/hide the clear button based on whether there are any highlights
+    updateClearButtonVisibility();
+}
+function applyUserHighlight() {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+        return;
+    }
+    const range = selection.getRangeAt(0);
+    // Only allow highlighting within the passage element
+    if (!elements.passage.contains(range.commonAncestorContainer)) {
+        return;
+    }
+    const selectedText = selection.toString().trim();
+    if (!selectedText) {
+        return;
+    }
+    // Check if the selection is entirely within an existing highlight — if so, remove it
+    const existingHighlight = findParentHighlight(range.commonAncestorContainer);
+    if (existingHighlight && existingHighlight.textContent?.trim() === selectedText) {
+        removeHighlightSpan(existingHighlight);
+        selection.removeAllRanges();
+        updateClearButtonVisibility();
+        return;
+    }
+    try {
+        // For simple same-node selections, use surroundContents
+        if (range.startContainer === range.endContainer) {
+            const span = document.createElement('span');
+            span.className = 'user-highlight';
+            range.surroundContents(span);
+        }
+        else {
+            // For cross-node selections, highlight each text node individually
+            highlightRange(range);
+        }
+    }
+    catch {
+        // Fallback: if surroundContents fails (partial element selection),
+        // use the multi-node approach
+        try {
+            highlightRange(range);
+        }
+        catch {
+            // Silently fail if highlighting is not possible
+        }
+    }
+    selection.removeAllRanges();
+    updateClearButtonVisibility();
+}
+function highlightRange(range) {
+    // Collect all text nodes within the range
+    const textNodes = [];
+    const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+            const nodeRange = document.createRange();
+            nodeRange.selectNodeContents(node);
+            if (range.compareBoundaryPoints(Range.START_TO_END, nodeRange) > 0 &&
+                range.compareBoundaryPoints(Range.END_TO_START, nodeRange) < 0) {
+                return NodeFilter.FILTER_ACCEPT;
+            }
+            return NodeFilter.FILTER_REJECT;
+        },
+    });
+    let node = walker.nextNode();
+    while (node) {
+        textNodes.push(node);
+        node = walker.nextNode();
+    }
+    for (const textNode of textNodes) {
+        // Skip if already highlighted
+        if (textNode.parentElement?.classList.contains('user-highlight')) {
+            continue;
+        }
+        const span = document.createElement('span');
+        span.className = 'user-highlight';
+        let highlightStart = 0;
+        let highlightEnd = textNode.textContent?.length ?? 0;
+        // Adjust boundaries for first and last nodes
+        if (textNode === range.startContainer) {
+            highlightStart = range.startOffset;
+        }
+        if (textNode === range.endContainer) {
+            highlightEnd = range.endOffset;
+        }
+        // Split the text node and wrap the selected portion
+        if (highlightStart > 0 || highlightEnd < (textNode.textContent?.length ?? 0)) {
+            const highlightedText = textNode.splitText(highlightStart);
+            highlightedText.splitText(highlightEnd - highlightStart);
+            const parent = highlightedText.parentNode;
+            if (parent) {
+                span.textContent = highlightedText.textContent;
+                parent.replaceChild(span, highlightedText);
+            }
+        }
+        else {
+            const parent = textNode.parentNode;
+            if (parent) {
+                span.textContent = textNode.textContent;
+                parent.replaceChild(span, textNode);
+            }
+        }
+    }
+}
+function findParentHighlight(node) {
+    let current = node;
+    while (current && current !== elements.passage) {
+        if (current instanceof HTMLElement && current.classList.contains('user-highlight')) {
+            return current;
+        }
+        current = current.parentNode;
+    }
+    return null;
+}
+function removeHighlightSpan(span) {
+    const parent = span.parentNode;
+    if (!parent) {
+        return;
+    }
+    while (span.firstChild) {
+        parent.insertBefore(span.firstChild, span);
+    }
+    parent.removeChild(span);
+    parent.normalize(); // Merge adjacent text nodes
+}
+function clearUserHighlights() {
+    const highlights = Array.from(elements.passage.querySelectorAll('.user-highlight'));
+    for (const highlight of highlights) {
+        removeHighlightSpan(highlight);
+    }
+    updateClearButtonVisibility();
+}
+function updateClearButtonVisibility() {
+    const hasHighlights = elements.passage.querySelectorAll('.user-highlight').length > 0;
+    elements.clearHighlighterBtn.classList.toggle('hidden', !hasHighlights);
 }
