@@ -33,3 +33,9 @@ dist-ssr
 
 # Don't commit .env.example backup
 !.env.example
+
+# Android APK and toolchain
+android-offline-app/
+.android-toolchain/
+*.apk
+*.aab

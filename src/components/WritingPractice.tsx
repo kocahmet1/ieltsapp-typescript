@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { SpellingForge } from './SpellingForge';
 import {
   X,
   PenLine,
@@ -17,7 +18,8 @@ import {
   Sparkles,
   History,
   RotateCcw,
-  ArrowLeft
+  ArrowLeft,
+  Keyboard
 } from 'lucide-react';
 import {
   WritingSubmission,
@@ -38,7 +40,7 @@ interface WritingPracticeProps {
   isOpenAIConfigured: boolean;
 }
 
-type ViewMode = 'write' | 'history' | 'result';
+type ViewMode = 'write' | 'history' | 'result' | 'spelling';
 
 export const WritingPractice = ({
   isOpen,
@@ -505,6 +507,14 @@ export const WritingPractice = ({
                   <span className="badge">{submissions.length}</span>
                 )}
               </button>
+              <button
+                className={`mode-btn ${viewMode === 'spelling' ? 'active' : ''}`}
+                onClick={() => setViewMode('spelling')}
+                style={viewMode === 'spelling' ? { background: '#f87171', borderColor: '#f87171', color: 'white' } : {}}
+              >
+                <Keyboard size={18} />
+                <span>Yazım</span>
+              </button>
             </div>
             <button className="close-btn" onClick={onClose}>
               <X size={24} />
@@ -826,6 +836,11 @@ export const WritingPractice = ({
                   </div>
                 )}
               </div>
+            )}
+
+            {/* ── SPELLING MODE ── */}
+            {viewMode === 'spelling' && (
+              <SpellingForge />
             )}
           </div>
         </div>
