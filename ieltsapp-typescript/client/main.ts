@@ -162,6 +162,7 @@ const elements = {
   historyCount: byId<HTMLElement>('historyCount'),
   highlighterToggleBtn: byId<HTMLButtonElement>('highlighterToggleBtn'),
   clearHighlighterBtn: byId<HTMLButtonElement>('clearHighlighterBtn'),
+  questionsContainer: byId<HTMLElement>('questionsContainer'),
 };
 
 initialize().catch((error) => {
@@ -194,8 +195,17 @@ function bindEvents(): void {
   elements.passage.addEventListener('mouseup', (event) => {
     void handlePassageSelection(event);
   });
+  elements.questionsContainer.addEventListener('mouseup', (event) => {
+    const target = event.target as HTMLElement;
+    // Don't translate when clicking on interactive elements (inputs, buttons, selects)
+    if (target.closest('input, button, select, .tfng-options')) {
+      return;
+    }
+    void handlePassageSelection(event);
+  });
   document.addEventListener('click', (event) => {
-    if (!elements.translationModal.contains(event.target as Node) && event.target !== elements.passage) {
+    const target = event.target as Node;
+    if (!elements.translationModal.contains(target) && !elements.passage.contains(target) && !elements.questionsContainer.contains(target)) {
       hideTranslationModal();
     }
   });
