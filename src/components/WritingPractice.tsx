@@ -111,6 +111,19 @@ export const WritingPractice = ({
     return null;
   }, [selectedPrompt, wordCount]);
 
+  // Detect single-word spelling errors from feedback
+  const hasSpellingErrors = (feedback: WritingFeedback) => {
+    return feedback.errors.some(e => {
+      if (e.errorLevel !== 'surface') return false;
+      const text = e.text.trim();
+      const suggestion = e.suggestion.trim();
+      if (text.includes(' ') || suggestion.includes(' ')) return false;
+      if (text.toLowerCase() === suggestion.toLowerCase()) return false;
+      const lenRatio = Math.min(text.length, suggestion.length) / Math.max(text.length, suggestion.length);
+      return lenRatio >= 0.4;
+    });
+  };
+
   // Handle submit
   const handleSubmit = async () => {
     if (!writingText.trim() || isSubmitting) return;
@@ -125,7 +138,12 @@ export const WritingPractice = ({
 
       if (feedback) {
         setCurrentFeedback(feedback);
-        setViewMode('result');
+        // Auto-launch spelling fix if there are spelling errors
+        if (hasSpellingErrors(feedback)) {
+          setViewMode('fix_spelling');
+        } else {
+          setViewMode('result');
+        }
         setIsVoiceTutorOpen(true);
       }
     } finally {
