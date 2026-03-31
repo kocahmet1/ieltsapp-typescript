@@ -1051,3 +1051,525 @@
     font-size: 1rem;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Paragraph Spelling Fix — Interactive Correction Tiles
+   ═══════════════════════════════════════════════════════════ */
+
+.psf-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+/* Header */
+.psf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.psf-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.psf-progress svg {
+  color: #f87171;
+}
+
+.psf-progress-count {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 2px 10px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+}
+
+/* Progress Bar */
+.psf-progress-bar {
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.psf-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f87171 0%, #34d399 100%);
+  border-radius: 3px;
+  transition: width 0.5s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+/* Instructions */
+.psf-instructions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(248, 113, 113, 0.06);
+  border: 1px solid rgba(248, 113, 113, 0.15);
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.psf-instr-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.psf-instr-dot.red {
+  background: rgba(248, 81, 73, 0.25);
+  border: 2px solid #f87171;
+}
+
+.psf-instr-dot.empty {
+  background: transparent;
+  border: 2px dashed var(--text-muted);
+}
+
+/* ─── Paragraph ─── */
+
+.psf-paragraph {
+  padding: var(--spacing-xl);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  font-size: 1.1rem;
+  line-height: 2.6;
+  color: var(--text-primary);
+  word-wrap: break-word;
+}
+
+.psf-text {
+  white-space: pre-wrap;
+}
+
+/* Misspelled word wrapper */
+.psf-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  margin: 0 2px;
+  border-radius: var(--radius-sm);
+  background: rgba(248, 113, 113, 0.06);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  transition: all 0.4s ease;
+  vertical-align: baseline;
+  position: relative;
+}
+
+.psf-word.completed {
+  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.4);
+  animation: psf-word-glow 0.6s ease;
+}
+
+@keyframes psf-word-glow {
+  0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5); }
+  50% { box-shadow: 0 0 12px 4px rgba(52, 211, 153, 0.3); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+
+.psf-word-check {
+  color: #34d399;
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-left: 2px;
+}
+
+/* ─── Letter Tiles ─── */
+
+.psf-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 34px;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+/* Correct letter tile — locked, subtle */
+.psf-tile.correct {
+  background: var(--bg-tertiary);
+  border: 1.5px solid var(--border-primary);
+  color: var(--text-primary);
+}
+
+/* Wrong letter tile — red, editable */
+.psf-tile.editable.wrong {
+  background: rgba(248, 81, 73, 0.15);
+  border: 2px solid #f87171;
+  color: #f87171;
+  text-align: center;
+  outline: none;
+  caret-color: #f87171;
+  padding: 0;
+  cursor: text;
+  text-transform: none;
+}
+
+.psf-tile.editable.wrong:focus {
+  background: rgba(248, 81, 73, 0.25);
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.2);
+  transform: scale(1.08);
+}
+
+/* Missing letter tile — dashed, empty */
+.psf-tile.editable.missing {
+  background: transparent;
+  border: 2px dashed var(--text-muted);
+  color: var(--text-primary);
+  text-align: center;
+  outline: none;
+  caret-color: var(--accent-primary);
+  padding: 0;
+  cursor: text;
+}
+
+.psf-tile.editable.missing:focus {
+  border-color: var(--accent-primary);
+  background: rgba(88, 166, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+  transform: scale(1.08);
+}
+
+/* Fixed tile — turned green */
+.psf-tile.editable.fixed {
+  background: rgba(52, 211, 153, 0.15) !important;
+  border: 2px solid #34d399 !important;
+  color: #34d399 !important;
+  cursor: default;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* Extra letter tile — strikethrough, dimmed */
+.psf-tile.extra {
+  background: rgba(248, 81, 73, 0.08);
+  border: 1.5px solid rgba(248, 81, 73, 0.3);
+  color: var(--accent-red);
+  opacity: 0.45;
+  text-decoration: line-through;
+  font-size: 0.85rem;
+}
+
+/* Hint button (speaker) */
+.psf-hint-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  color: #f87171;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+.psf-hint-btn:hover {
+  background: rgba(248, 113, 113, 0.2);
+  transform: scale(1.1);
+}
+
+.psf-hint-btn.speaking {
+  animation: sf-pulse 0.8s ease-in-out infinite;
+}
+
+/* ─── Explanations Panel ─── */
+
+.psf-explanations {
+  padding: var(--spacing-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+}
+
+.psf-explanations h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-md);
+}
+
+.psf-explanation-item {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-left: 3px solid #f87171;
+  margin-bottom: var(--spacing-sm);
+  transition: all 0.3s ease;
+}
+
+.psf-explanation-item.done {
+  border-left-color: #34d399;
+  opacity: 0.65;
+}
+
+.psf-explanation-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 0.88rem;
+  flex-wrap: wrap;
+}
+
+.psf-explanation-num {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.psf-explanation-wrong {
+  color: #f87171;
+  text-decoration: line-through;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.psf-explanation-arrow {
+  color: var(--text-muted);
+}
+
+.psf-explanation-correct {
+  color: #34d399;
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.psf-explanation-check {
+  color: #34d399;
+}
+
+.psf-explanation-text {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+/* ─── Empty State ─── */
+
+.psf-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-2xl);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.psf-empty svg {
+  color: #34d399;
+}
+
+.psf-empty h3 {
+  font-size: 1.2rem;
+  color: var(--text-primary);
+}
+
+/* ─── Success Screen ─── */
+
+.psf-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-2xl) var(--spacing-lg);
+  text-align: center;
+}
+
+.psf-success-icon {
+  font-size: 3rem;
+  animation: psf-bounce 0.6s ease;
+}
+
+@keyframes psf-bounce {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.psf-success h3 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.psf-success p {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.psf-success-stats {
+  display: flex;
+  gap: var(--spacing-lg);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.psf-stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  min-width: 100px;
+}
+
+.psf-stat-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.psf-stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.psf-success-words {
+  width: 100%;
+  max-width: 400px;
+  text-align: left;
+}
+
+.psf-success-words h4 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.psf-word-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.psf-word-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+}
+
+.psf-word-wrong {
+  color: #f87171;
+  text-decoration: line-through;
+}
+
+.psf-word-arrow {
+  color: var(--text-muted);
+}
+
+.psf-word-correct {
+  color: #34d399;
+  font-weight: 700;
+}
+
+.psf-success-actions {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+/* ─── Fix Spelling CTA Button (in WritingPractice) ─── */
+
+.fix-spelling-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.12) 0%, rgba(251, 146, 60, 0.08) 100%);
+  border: 2px dashed rgba(248, 113, 113, 0.4);
+  border-radius: var(--radius-lg);
+  color: #f87171;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: var(--spacing-md);
+}
+
+.fix-spelling-cta:hover {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.2) 0%, rgba(251, 146, 60, 0.14) 100%);
+  border-color: #f87171;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(248, 113, 113, 0.15);
+}
+
+.fix-spelling-cta .cta-count {
+  padding: 2px 8px;
+  background: rgba(248, 113, 113, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-family: var(--font-mono);
+}
+
+/* ─── Paragraph Spelling Fix — Responsive ─── */
+
+@media (max-width: 600px) {
+  .psf-paragraph {
+    padding: var(--spacing-md);
+    font-size: 0.95rem;
+    line-height: 2.4;
+  }
+
+  .psf-tile {
+    width: 24px;
+    height: 30px;
+    font-size: 0.88rem;
+  }
+
+  .psf-instructions {
+    font-size: 0.72rem;
+  }
+
+  .psf-success-stats {
+    gap: var(--spacing-sm);
+  }
+
+  .psf-stat-card {
+    min-width: 80px;
+    padding: var(--spacing-sm);
+  }
+
+  .psf-stat-value {
+    font-size: 1.2rem;
+  }
+}

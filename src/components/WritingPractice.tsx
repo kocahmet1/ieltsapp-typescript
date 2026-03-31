@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { SpellingForge } from './SpellingForge';
+import { ParagraphSpellingFix } from './ParagraphSpellingFix';
 import {
   X,
   PenLine,
@@ -40,7 +41,7 @@ interface WritingPracticeProps {
   isOpenAIConfigured: boolean;
 }
 
-type ViewMode = 'write' | 'history' | 'result' | 'spelling';
+type ViewMode = 'write' | 'history' | 'result' | 'spelling' | 'fix_spelling';
 
 export const WritingPractice = ({
   isOpen,
@@ -769,6 +770,30 @@ export const WritingPractice = ({
                   </div>
                 )}
 
+                {/* Fix Spelling CTA — only if spelling errors exist */}
+                {(() => {
+                  const spellingErrors = currentFeedback.errors.filter(e => {
+                    if (e.errorLevel !== 'surface') return false;
+                    const text = e.text.trim();
+                    const suggestion = e.suggestion.trim();
+                    if (text.includes(' ') || suggestion.includes(' ')) return false;
+                    if (text.toLowerCase() === suggestion.toLowerCase()) return false;
+                    const lenRatio = Math.min(text.length, suggestion.length) / Math.max(text.length, suggestion.length);
+                    return lenRatio >= 0.4;
+                  });
+                  if (spellingErrors.length === 0) return null;
+                  return (
+                    <button
+                      className="fix-spelling-cta"
+                      onClick={() => setViewMode('fix_spelling')}
+                    >
+                      <Keyboard size={20} />
+                      <span>Yazımını Düzelt</span>
+                      <span className="cta-count">{spellingErrors.length} yazım hatası</span>
+                    </button>
+                  );
+                })()}
+
                 <div className="result-actions">
                   <button className="new-writing-btn" onClick={handleNewWriting}>
                     <RotateCcw size={18} />
@@ -836,6 +861,16 @@ export const WritingPractice = ({
                   </div>
                 )}
               </div>
+            )}
+
+            {/* ── FIX SPELLING MODE ── */}
+            {viewMode === 'fix_spelling' && currentFeedback && (
+              <ParagraphSpellingFix
+                originalText={writingText}
+                errors={currentFeedback.errors}
+                onComplete={() => setViewMode('result')}
+                onBack={() => setViewMode('result')}
+              />
             )}
 
             {/* ── SPELLING MODE ── */}
