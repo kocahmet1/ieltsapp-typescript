@@ -79,6 +79,7 @@ const elements = {
     historyCount: byId('historyCount'),
     highlighterToggleBtn: byId('highlighterToggleBtn'),
     clearHighlighterBtn: byId('clearHighlighterBtn'),
+    questionsContainer: byId('questionsContainer'),
 };
 initialize().catch((error) => {
     console.error(error);
@@ -106,8 +107,17 @@ function bindEvents() {
     elements.passage.addEventListener('mouseup', (event) => {
         void handlePassageSelection(event);
     });
+    elements.questionsContainer.addEventListener('mouseup', (event) => {
+        const target = event.target;
+        // Don't translate when clicking on interactive elements (inputs, buttons, selects)
+        if (target.closest('input, button, select, .tfng-options')) {
+            return;
+        }
+        void handlePassageSelection(event);
+    });
     document.addEventListener('click', (event) => {
-        if (!elements.translationModal.contains(event.target) && event.target !== elements.passage) {
+        const target = event.target;
+        if (!elements.translationModal.contains(target) && !elements.passage.contains(target) && !elements.questionsContainer.contains(target)) {
             hideTranslationModal();
         }
     });

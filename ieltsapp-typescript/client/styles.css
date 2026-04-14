@@ -239,6 +239,61 @@ main {
     color: #e74c3c;
 }
 
+/* Show Answer Button & Reveal Box */
+.show-answer-btn {
+    background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+    color: white;
+    font-weight: 600;
+    border: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(39, 174, 96, 0.3);
+}
+
+.show-answer-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+    opacity: 1;
+}
+
+.show-answer-btn:disabled {
+    background: #95a5a6;
+    cursor: default;
+    box-shadow: none;
+    opacity: 0.8;
+}
+
+.answer-reveal-box {
+    margin-top: 0.75rem;
+    padding: 0.85rem 1.1rem;
+    background: linear-gradient(135deg, #e8f8f0 0%, #f0fdf6 100%);
+    border: 2px solid #27ae60;
+    border-radius: 8px;
+    font-size: 1.05rem;
+    animation: revealSlideIn 0.35s ease-out;
+    box-shadow: 0 2px 8px rgba(39, 174, 96, 0.12);
+}
+
+.answer-reveal-label {
+    font-weight: 700;
+    color: #1e8449;
+}
+
+.answer-reveal-value {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+@keyframes revealSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* Translation Modal */
 .translation-modal {
     display: none;
