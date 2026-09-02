@@ -20,13 +20,20 @@ const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 loadEnvFile(envFile);
 
+const DEFAULT_OPENAI_MODEL = 'gpt-5.6-luna';
+const MAX_IMPORT_PDF_BYTES = 25 * 1024 * 1024;
+
 const config = {
   port: Number(process.env.PORT || 5080),
   sessionSecret: process.env.SESSION_SECRET || 'development-session-secret',
   openaiApiKey: process.env.OPENAI_API_KEY || '',
   openaiBaseUrl: (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, ''),
-  openaiGenerationModel: process.env.OPENAI_GENERATION_MODEL || 'gpt-4o',
-  openaiTranslationModel: process.env.OPENAI_TRANSLATION_MODEL || 'gpt-4o-mini',
+  openaiGenerationModel: process.env.OPENAI_GENERATION_MODEL || DEFAULT_OPENAI_MODEL,
+  openaiGenerationReasoning: process.env.OPENAI_GENERATION_REASONING_EFFORT || 'high',
+  openaiImportModel: process.env.OPENAI_IMPORT_MODEL || process.env.OPENAI_GENERATION_MODEL || DEFAULT_OPENAI_MODEL,
+  openaiImportReasoning: process.env.OPENAI_IMPORT_REASONING_EFFORT || 'high',
+  openaiTranslationModel: process.env.OPENAI_TRANSLATION_MODEL || DEFAULT_OPENAI_MODEL,
+  openaiTranslationReasoning: process.env.OPENAI_TRANSLATION_REASONING_EFFORT || 'none',
 };
 
 ensureDirectory(dataRoot);
@@ -74,6 +81,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && requestUrl.pathname === '/api/generate') {
       return await handleGenerate(req, res, requestUrl);
+    }
+    if (req.method === 'POST' && requestUrl.pathname === '/api/ingest') {
+      return await handleIngest(req, res, requestUrl);
     }
     if (req.method === 'GET' && requestUrl.pathname === '/api/job-status') {
       return handleJobStatus(res, requestUrl);
@@ -291,6 +301,8 @@ function handleListPracticeSets(res) {
     items.push({
       id: practiceSet.id,
       question_type: practiceSet.question_type || 'mixed_fitb_tfng',
+      source: practiceSet.source || 'generated',
+      title: practiceSet.title || null,
       created_at: practiceSet.created_at || null,
       passage_preview: passagePreview,
     });
@@ -326,10 +338,11 @@ async function handleTranslate(req, res) {
     const translation = await callOpenAiChat({
       apiKey: apiKey,
       model: config.openaiTranslationModel,
+      reasoningEffort: config.openaiTranslationReasoning,
       systemPrompt,
       userMessage: word,
       temperature: 0.2,
-      maxTokens: isSentence ? 300 : 80,
+      maxTokens: isSentence ? 1200 : 400,
     });
 
     sendJson(res, 200, { word, translation: translation.trim() });
@@ -342,17 +355,25 @@ async function handleTranslate(req, res) {
   }
 }
 
-async function callOpenAiChat({ apiKey, model, systemPrompt, userMessage, temperature, maxTokens, responseFormat }) {
+function isReasoningModel(model) {
+  return /^(o\d|gpt-5)/i.test(String(model || ''));
+}
+
+async function callOpenAiChat({ apiKey, model, systemPrompt, userMessage, messages, temperature, maxTokens, responseFormat, reasoningEffort }) {
   const payload = {
     model,
-    messages: [
+    messages: messages || [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userMessage },
     ],
     max_completion_tokens: maxTokens,
   };
-  // Reasoning models (o-series, gpt-5 family) only accept the default temperature.
-  if (typeof temperature === 'number' && !/^(o\d|gpt-5)/i.test(model)) {
+  if (isReasoningModel(model)) {
+    // Reasoning models (o-series, gpt-5 family) take a reasoning_effort and reject non-default temperatures.
+    if (reasoningEffort) {
+      payload.reasoning_effort = reasoningEffort;
+    }
+  } else if (typeof temperature === 'number') {
     payload.temperature = temperature;
   }
   if (responseFormat) {
@@ -374,9 +395,16 @@ async function callOpenAiChat({ apiKey, model, systemPrompt, userMessage, temper
   }
 
   const data = await response.json();
-  const text = data.choices?.[0]?.message?.content || '';
+  const choice = data.choices?.[0];
+  const text = choice?.message?.content || '';
   if (!text) {
+    if (choice?.finish_reason === 'length') {
+      throw new Error('OpenAI stopped before producing any text (token limit reached). Please try again.');
+    }
     throw new Error('OpenAI returned no text output.');
+  }
+  if (choice?.finish_reason === 'length') {
+    throw new Error('OpenAI output was cut off by the token limit. Please try again.');
   }
   return text;
 }
@@ -387,10 +415,11 @@ async function generatePracticeJob({ jobId, apiKey, questionType, baseUrl }) {
     const text = await callOpenAiChat({
       apiKey,
       model: config.openaiGenerationModel,
+      reasoningEffort: config.openaiGenerationReasoning,
       systemPrompt: 'You are an expert IELTS Academic Reading test writer. Respond with a single valid JSON object and nothing else.',
       userMessage: prompt,
       temperature: 0.7,
-      maxTokens: 6000,
+      maxTokens: 32000,
       responseFormat: { type: 'json_object' },
     });
 
@@ -424,6 +453,363 @@ async function generatePracticeJob({ jobId, apiKey, questionType, baseUrl }) {
       error: message,
     });
   }
+}
+
+async function handleIngest(req, res, requestUrl) {
+  let body;
+  try {
+    body = await readJsonBody(req, { maxBytes: Math.ceil(MAX_IMPORT_PDF_BYTES * 1.4) + 65536 });
+  } catch (error) {
+    if (error && error.code === 'BODY_TOO_LARGE') {
+      return sendJson(res, 413, { error: `The PDF is too large. Maximum size is ${Math.round(MAX_IMPORT_PDF_BYTES / (1024 * 1024))} MB.` });
+    }
+    throw error;
+  }
+
+  const apiKey = String(body.openaiApiKey || '').trim() || config.openaiApiKey;
+  if (!apiKey) {
+    return sendJson(res, 500, { error: 'No OpenAI API key available. Please set one in API Key Settings.' });
+  }
+
+  const filename = sanitizeFilename(body.filename);
+  const fileData = String(body.file_data || '');
+  const base64Match = /^data:application\/pdf;base64,([A-Za-z0-9+/=\s]+)$/.exec(fileData);
+  if (!base64Match) {
+    return sendJson(res, 400, { error: 'Please upload a PDF file.' });
+  }
+  const pdfBytes = Buffer.from(base64Match[1], 'base64');
+  if (pdfBytes.length < 8 || pdfBytes.subarray(0, 5).toString('latin1') !== '%PDF-') {
+    return sendJson(res, 400, { error: 'That file does not look like a valid PDF.' });
+  }
+  if (pdfBytes.length > MAX_IMPORT_PDF_BYTES) {
+    return sendJson(res, 413, { error: `The PDF is too large. Maximum size is ${Math.round(MAX_IMPORT_PDF_BYTES / (1024 * 1024))} MB.` });
+  }
+
+  const jobId = crypto.randomUUID();
+  saveJobStatus(jobId, {
+    id: jobId,
+    kind: 'import',
+    status: 'pending',
+    created_at: new Date().toISOString(),
+    practice_set_id: null,
+    error: null,
+  });
+
+  const protocol = String(req.headers['x-forwarded-proto'] || requestUrl.protocol.replace(':', '') || 'http');
+  const host = String(req.headers.host || `localhost:${config.port}`);
+  const baseUrl = `${protocol}://${host}`;
+
+  void importPracticeJob({ jobId, apiKey, filename, fileData: `data:application/pdf;base64,${pdfBytes.toString('base64')}`, baseUrl });
+  sendJson(res, 200, { job_id: jobId, status: 'pending' });
+}
+
+async function importPracticeJob({ jobId, apiKey, filename, fileData, baseUrl }) {
+  try {
+    const text = await callOpenAiChat({
+      apiKey,
+      model: config.openaiImportModel,
+      reasoningEffort: config.openaiImportReasoning,
+      messages: [
+        { role: 'system', content: IMPORT_SYSTEM_PROMPT },
+        {
+          role: 'user',
+          content: [
+            { type: 'file', file: { filename, file_data: fileData } },
+            { type: 'text', text: importInstructions() },
+          ],
+        },
+      ],
+      maxTokens: 32000,
+      responseFormat: {
+        type: 'json_schema',
+        json_schema: { name: 'imported_reading', strict: true, schema: IMPORT_SCHEMA },
+      },
+    });
+
+    const extracted = extractJsonObject(text);
+    const practiceSet = buildImportedPracticeSet(extracted, filename);
+    const practiceId = crypto.randomUUID();
+    practiceSet.id = practiceId;
+    practiceSet.created_at = new Date().toISOString();
+    practiceSet.shareUrl = `${baseUrl}/?id=${practiceId}`;
+
+    savePracticeSet(practiceId, practiceSet);
+    writeJson(stateFile, { latestPracticeSetId: practiceId });
+    saveJobStatus(jobId, {
+      id: jobId,
+      kind: 'import',
+      status: 'completed',
+      created_at: new Date().toISOString(),
+      practice_set_id: practiceId,
+      error: null,
+    });
+  } catch (error) {
+    console.error(error);
+    let message = error instanceof Error ? error.message : 'Import failed';
+    if (message.includes('429')) {
+      message = 'API kota sınırına ulaşıldı. Lütfen birkaç saniye bekleyip tekrar deneyin.';
+    }
+    saveJobStatus(jobId, {
+      id: jobId,
+      kind: 'import',
+      status: 'failed',
+      created_at: new Date().toISOString(),
+      practice_set_id: null,
+      error: message,
+    });
+  }
+}
+
+const IMPORT_SYSTEM_PROMPT = 'You are an expert IELTS Academic Reading examiner who converts printed reading tests into structured data. You transcribe passages faithfully, never paraphrase or translate them, and you follow the JSON schema exactly.';
+
+const IMPORT_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['title', 'passage', 'has_answer_key', 'questions', 'matching_headings', 'skipped_questions', 'notes'],
+  properties: {
+    title: { type: 'string', description: 'Title of the reading passage as printed, or a short descriptive title if none is printed.' },
+    passage: { type: 'string', description: 'The complete passage text transcribed verbatim, paragraphs separated by one blank line. If paragraphs are labelled (A, B, C...), start each paragraph with its label followed by a space.' },
+    has_answer_key: { type: 'boolean', description: 'true if the PDF contains an answer key for these questions.' },
+    questions: {
+      type: 'array',
+      description: 'Every True/False/Not Given, Yes/No/Not Given, completion and short-answer item, in printed order.',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['number', 'question_type', 'question', 'answer', 'source_sentence'],
+        properties: {
+          number: { type: 'string', description: 'The question number as printed, e.g. "7".' },
+          question_type: { type: 'string', enum: ['FITB', 'TFNG'] },
+          question: { type: 'string', description: 'FITB: a self-contained sentence with the gap written as ______ (include the summary heading or context needed to make it unambiguous). TFNG: the statement.' },
+          answer: { type: 'string', description: 'FITB: the exact word(s) from the passage that fill the gap. TFNG: exactly "True", "False" or "Not Given" (Yes = True, No = False).' },
+          source_sentence: { type: 'string', description: 'The passage sentence that supports the answer, copied verbatim. Empty string for Not Given.' },
+        },
+      },
+    },
+    matching_headings: {
+      type: ['object', 'null'],
+      additionalProperties: false,
+      required: ['paragraphs', 'headings', 'answers'],
+      description: 'The "choose the correct heading for each paragraph" task, or null if the PDF has none.',
+      properties: {
+        paragraphs: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['id', 'content'],
+            properties: {
+              id: { type: 'string', description: 'Paragraph label as printed, e.g. "A".' },
+              content: { type: 'string', description: 'The paragraph text verbatim (without the label).' },
+            },
+          },
+        },
+        headings: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['id', 'text'],
+            properties: {
+              id: { type: 'string', description: 'Heading numeral as printed, e.g. "iv".' },
+              text: { type: 'string' },
+            },
+          },
+        },
+        answers: {
+          type: 'array',
+          description: 'One entry per paragraph that is asked about (skip paragraphs given as examples).',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['paragraph_id', 'heading_id'],
+            properties: {
+              paragraph_id: { type: 'string' },
+              heading_id: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    skipped_questions: {
+      type: 'array',
+      description: 'Question groups that cannot be converted (multiple choice, matching information/features/sentence endings, diagram or map labelling, etc.).',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['numbers', 'type', 'reason'],
+        properties: {
+          numbers: { type: 'string', description: 'Question numbers, e.g. "27-31".' },
+          type: { type: 'string', description: 'Short type name, e.g. "multiple choice".' },
+          reason: { type: 'string' },
+        },
+      },
+    },
+    notes: { type: 'string', description: 'Anything the user should know (illegible parts, assumptions made). Empty string if nothing.' },
+  },
+};
+
+function importInstructions() {
+  return `The attached PDF contains one IELTS-style reading passage with its questions (and possibly an answer key). Convert it to the JSON schema.
+
+Rules:
+1. passage: transcribe the passage verbatim, only repairing line-break hyphenation and spacing artefacts from the PDF. Keep every paragraph and separate paragraphs with one blank line. If paragraphs are labelled A, B, C..., keep the label at the start of each paragraph.
+2. questions: convert
+   - True/False/Not Given and Yes/No/Not Given items to TFNG (Yes = True, No = False; keep "Not Given").
+   - Sentence completion, summary/note/table/flow-chart completion and short-answer questions to FITB. Produce one FITB item per gap, written as a self-contained sentence with the gap as ______ and enough surrounding words to be unambiguous. The answer must be the exact word(s) from the passage, respecting the word limit printed in the instructions.
+   - Do NOT convert multiple choice, matching information, matching features, matching sentence endings, diagram/map/plan labelling or any other type; list those groups in skipped_questions with their question numbers and type.
+3. matching_headings: fill it in only if the PDF has a "choose the correct heading" task: every paragraph that has a question (label + verbatim text), every heading option (numeral + text) and the answers. Otherwise use null.
+4. Answers: use the answer key when the PDF contains one and set has_answer_key to true. If there is no answer key, solve the questions yourself with great care using only the passage and set has_answer_key to false.
+5. Keep the printed question numbers in "number". Keep the passage in its original language. Return JSON only.`;
+}
+
+function buildImportedPracticeSet(extracted, filename) {
+  const passage = normalizePassage(String(extracted.passage || ''));
+  if (passage.split(/\s+/).filter(Boolean).length < 80) {
+    throw new Error('Could not find a reading passage in the PDF (the extracted text is too short).');
+  }
+
+  const skipped = (Array.isArray(extracted.skipped_questions) ? extracted.skipped_questions : [])
+    .map(normalizeSkippedGroup)
+    .filter(Boolean);
+  const questions = [];
+  const usedIds = new Set();
+  const rawQuestions = Array.isArray(extracted.questions) ? extracted.questions : [];
+  rawQuestions.forEach((raw, index) => {
+    const result = normalizeImportedQuestion(raw, index, usedIds);
+    if (result.question) {
+      questions.push(result.question);
+    } else if (result.skipped) {
+      skipped.push(result.skipped);
+    }
+  });
+
+  const headings = normalizeMatchingHeadings(extracted.matching_headings);
+  if (headings.error) {
+    skipped.push({ numbers: '', type: 'matching headings', reason: headings.error });
+  }
+
+  if (questions.length === 0 && !headings.data) {
+    const found = skipped.length > 0 ? ` The PDF only contained: ${skipped.map((group) => group.type).join(', ')}.` : '';
+    throw new Error(`No supported questions (True/False/Not Given, completion or short answer, matching headings) were found in the PDF.${found}`);
+  }
+
+  const practiceSet = {
+    id: null,
+    question_type: 'imported',
+    source: 'pdf',
+    title: String(extracted.title || '').trim().slice(0, 200) || filename.replace(/\.pdf$/i, ''),
+    source_filename: filename,
+    passage,
+    questions,
+    answers_inferred: extracted.has_answer_key === false,
+    skipped_questions: skipped,
+    import_notes: String(extracted.notes || '').trim().slice(0, 1000) || null,
+  };
+  if (headings.data) {
+    Object.assign(practiceSet, headings.data);
+  }
+  return practiceSet;
+}
+
+function normalizePassage(text) {
+  return text
+    .replace(/\r\n?/g, '\n')
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.replace(/\s*\n\s*/g, ' ').replace(/[ \t]+/g, ' ').trim())
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+function normalizeImportedQuestion(raw, index, usedIds) {
+  const number = String(raw?.number ?? '').trim();
+  const type = String(raw?.question_type ?? '').trim().toUpperCase();
+  const questionText = String(raw?.question ?? '').replace(/\s+/g, ' ').trim();
+  const answerText = String(raw?.answer ?? '').replace(/\s+/g, ' ').trim();
+  const sourceSentence = String(raw?.source_sentence ?? '').replace(/\s+/g, ' ').trim();
+  const label = number || String(index + 1);
+
+  if (!questionText || !answerText) {
+    return { skipped: { numbers: label, type: type === 'TFNG' ? 'true/false/not given' : 'completion', reason: 'The question or its answer was missing.' } };
+  }
+
+  let id = label;
+  while (usedIds.has(id)) {
+    id = `${id}b`;
+  }
+  usedIds.add(id);
+
+  if (type === 'TFNG') {
+    const answer = normalizeTfngAnswer(answerText);
+    if (!answer) {
+      return { skipped: { numbers: label, type: 'true/false/not given', reason: `Unrecognised answer "${answerText}".` } };
+    }
+    return { question: { id, question_type: 'TFNG', statement: questionText, answer, relevant_passage: answer === 'Not Given' ? '' : sourceSentence } };
+  }
+
+  if (type === 'FITB') {
+    const question = /_{2,}/.test(questionText) ? questionText : `${questionText} ______`;
+    return { question: { id, question_type: 'FITB', question, answer: answerText, source_sentence: sourceSentence } };
+  }
+
+  return { skipped: { numbers: label, type: type.toLowerCase() || 'unknown', reason: 'Unsupported question type.' } };
+}
+
+function normalizeTfngAnswer(value) {
+  const normalized = value.toLowerCase().replace(/[^a-z]/g, '');
+  if (normalized === 'true' || normalized === 'yes' || normalized === 't' || normalized === 'y') return 'True';
+  if (normalized === 'false' || normalized === 'no' || normalized === 'f' || normalized === 'n') return 'False';
+  if (normalized === 'notgiven' || normalized === 'ng') return 'Not Given';
+  return null;
+}
+
+function normalizeSkippedGroup(raw) {
+  const type = String(raw?.type ?? '').replace(/\s+/g, ' ').trim();
+  if (!type) return null;
+  return {
+    numbers: String(raw?.numbers ?? '').trim(),
+    type,
+    reason: String(raw?.reason ?? '').trim(),
+  };
+}
+
+function normalizeMatchingHeadings(raw) {
+  if (!raw || typeof raw !== 'object') {
+    return { data: null };
+  }
+  const headings = (Array.isArray(raw.headings) ? raw.headings : [])
+    .map((heading) => ({ id: String(heading?.id ?? '').trim(), text: String(heading?.text ?? '').replace(/\s+/g, ' ').trim() }))
+    .filter((heading) => heading.id && heading.text);
+  const headingIds = new Set(headings.map((heading) => heading.id));
+  const answers = {};
+  for (const pair of Array.isArray(raw.answers) ? raw.answers : []) {
+    const paragraphId = String(pair?.paragraph_id ?? '').trim();
+    const headingId = String(pair?.heading_id ?? '').trim();
+    if (paragraphId && headingIds.has(headingId)) {
+      answers[paragraphId] = headingId;
+    }
+  }
+  const paragraphs = (Array.isArray(raw.paragraphs) ? raw.paragraphs : [])
+    .map((paragraph) => ({ id: String(paragraph?.id ?? '').trim(), content: String(paragraph?.content ?? '').replace(/\s+/g, ' ').trim() }))
+    .filter((paragraph) => paragraph.id && paragraph.content && answers[paragraph.id]);
+
+  if (headings.length < 2 || paragraphs.length < 2) {
+    if (headings.length === 0 && paragraphs.length === 0) {
+      return { data: null };
+    }
+    return { data: null, error: 'The matching-headings task could not be read completely, so it was left out.' };
+  }
+  const keptIds = new Set(paragraphs.map((paragraph) => paragraph.id));
+  for (const key of Object.keys(answers)) {
+    if (!keptIds.has(key)) delete answers[key];
+  }
+  return { data: { paragraphs, headings, answers } };
+}
+
+function sanitizeFilename(value) {
+  const base = String(value || '').split(/[\\/]/).pop().replace(/\p{Cc}/gu, '').trim().slice(0, 120);
+  if (!base) return 'reading.pdf';
+  return /\.pdf$/i.test(base) ? base : `${base}.pdf`;
 }
 
 function mixedPrompt() {
@@ -593,19 +979,34 @@ function formatCookie(name, value, maxAge) {
   return `${name}=${encodeURIComponent(value)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${maxAge}`;
 }
 
-function readJsonBody(req) {
+function readJsonBody(req, options = {}) {
+  const maxBytes = options.maxBytes || 2 * 1024 * 1024;
   return new Promise((resolve, reject) => {
-    let body = '';
+    const chunks = [];
+    let received = 0;
+    let tooLarge = false;
     req.on('data', (chunk) => {
-      body += chunk.toString();
+      received += chunk.length;
+      if (received > maxBytes) {
+        tooLarge = true;
+        chunks.length = 0;
+        return;
+      }
+      chunks.push(chunk);
     });
     req.on('end', () => {
-      if (!body) {
+      if (tooLarge) {
+        const error = new Error('Request body too large');
+        error.code = 'BODY_TOO_LARGE';
+        reject(error);
+        return;
+      }
+      if (received === 0) {
         resolve({});
         return;
       }
       try {
-        resolve(JSON.parse(body));
+        resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));
       } catch (error) {
         reject(error);
       }

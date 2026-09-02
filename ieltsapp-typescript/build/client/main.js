@@ -43,6 +43,9 @@ const elements = {
     generateBtn: byId('generateBtn'),
     generateModeSelect: byId('generateModeSelect'),
     loading: byId('loading'),
+    importPdfBtn: byId('importPdfBtn'),
+    importPdfInput: byId('importPdfInput'),
+    importNotice: byId('importNotice'),
     apiKeyToggleBtn: byId('apiKeyToggleBtn'),
     apiKeySection: byId('apiKeySection'),
     registerForm: byId('registerForm'),
@@ -96,6 +99,16 @@ async function initialize() {
 function bindEvents() {
     elements.generateBtn.addEventListener('click', () => {
         void generatePracticeSet();
+    });
+    elements.importPdfBtn.addEventListener('click', () => {
+        elements.importPdfInput.click();
+    });
+    elements.importPdfInput.addEventListener('change', () => {
+        const file = elements.importPdfInput.files?.[0];
+        elements.importPdfInput.value = '';
+        if (file) {
+            void importPdf(file);
+        }
     });
     elements.apiKeyToggleBtn.addEventListener('click', toggleApiKeySection);
     elements.saveOpenaiKeyBtn.addEventListener('click', saveOpenaiKey);
@@ -292,6 +305,7 @@ async function generatePracticeSet() {
     <p class="small">This can take a while because the passage and questions are generated on demand.</p>
   `);
     elements.generateBtn.disabled = true;
+    elements.importPdfBtn.disabled = true;
     try {
         const response = await fetch('/api/generate', {
             method: 'POST',
@@ -318,16 +332,87 @@ async function generatePracticeSet() {
     }
     finally {
         elements.generateBtn.disabled = false;
+        elements.importPdfBtn.disabled = false;
     }
 }
-async function pollJobStatus(jobId) {
+const MAX_IMPORT_PDF_BYTES = 25 * 1024 * 1024;
+async function importPdf(file) {
+    const looksLikePdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!looksLikePdf) {
+        setLoadingHtml('<p style="color: #b42318;">Please choose a PDF file.</p>');
+        return;
+    }
+    if (file.size > MAX_IMPORT_PDF_BYTES) {
+        setLoadingHtml(`<p style="color: #b42318;">That PDF is too large (maximum ${Math.round(MAX_IMPORT_PDF_BYTES / (1024 * 1024))} MB).</p>`);
+        return;
+    }
+    clearHighlights();
+    state.fitbResults.clear();
+    state.tfngResults.clear();
+    state.lastSavedScores = { fitb: null, tfng: null, mh: null };
+    setLoadingHtml(`
+    <p>Uploading ${escapeHtml(file.name)}...</p>
+    <p class="small">The passage and its questions are extracted with AI. This usually takes one to two minutes.</p>
+  `);
+    elements.generateBtn.disabled = true;
+    elements.importPdfBtn.disabled = true;
+    try {
+        const fileData = await readFileAsPdfDataUrl(file);
+        const response = await fetch('/api/ingest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                filename: file.name,
+                file_data: fileData,
+                openaiApiKey: window.localStorage.getItem('openaiApiKey') ?? '',
+            }),
+            credentials: 'same-origin',
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload.job_id) {
+            throw new Error(payload.error ?? 'Failed to start the import.');
+        }
+        const practiceSet = await pollJobStatus(payload.job_id, { label: `Importing ${file.name}...`, maxDuration: 600000 });
+        if (!practiceSet) {
+            throw new Error('The import did not complete in time.');
+        }
+        displayPracticeSet(practiceSet);
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown import failure.';
+        setLoadingHtml(`<p style="color: #b42318;">${escapeHtml(message)}</p>`);
+    }
+    finally {
+        elements.generateBtn.disabled = false;
+        elements.importPdfBtn.disabled = false;
+    }
+}
+function readFileAsPdfDataUrl(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Could not read the selected file.'));
+        reader.onload = () => {
+            const result = typeof reader.result === 'string' ? reader.result : '';
+            const commaIndex = result.indexOf(',');
+            if (!result.startsWith('data:') || commaIndex === -1) {
+                reject(new Error('Could not read the selected file.'));
+                return;
+            }
+            // Browsers sometimes report an empty or generic MIME type for .pdf files; normalise the prefix.
+            resolve(`data:application/pdf;base64,${result.slice(commaIndex + 1)}`);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+async function pollJobStatus(jobId, options = {}) {
+    const label = options.label ?? 'Generating practice set...';
     const startedAt = Date.now();
-    const maxDuration = 180000;
+    const maxDuration = options.maxDuration ?? 420000;
     const interval = 2000;
     while (Date.now() - startedAt < maxDuration) {
         const progress = Math.min(((Date.now() - startedAt) / maxDuration) * 100, 100);
         setLoadingHtml(`
-      <p>Generating practice set...</p>
+      <p>${escapeHtml(label)}</p>
       <p class="small">Elapsed ${Math.floor((Date.now() - startedAt) / 1000)}s</p>
       <div class="progress-container">
         <div class="progress-bar" style="width:${progress}%;"></div>
@@ -377,24 +462,59 @@ function displayPracticeSet(practiceSet) {
     hideTranslationModal();
     renderPassage(practiceSet.passage);
     renderShareUrl(practiceSet.shareUrl ?? '');
-    const questionType = resolvePracticeSetType(practiceSet);
-    if (questionType === 'matching_headings') {
-        renderMatchingHeadings(practiceSet);
-        switchTab('mh');
-    }
-    else {
+    const hasFitb = fitbQuestionsOf(practiceSet).length > 0;
+    const hasTfng = tfngQuestionsOf(practiceSet).length > 0;
+    const hasMh = hasMatchingHeadings(practiceSet);
+    if (hasFitb || hasTfng) {
         renderMixedQuestions(practiceSet);
-        switchTab('fitb');
     }
+    if (hasMh) {
+        renderMatchingHeadings(practiceSet);
+    }
+    elements.fitbTab.classList.toggle('hidden', !hasFitb);
+    elements.tfngTab.classList.toggle('hidden', !hasTfng);
+    elements.mhTab.classList.toggle('hidden', !hasMh);
+    switchTab(hasFitb ? 'fitb' : hasTfng ? 'tfng' : 'mh');
+    renderImportNotice(practiceSet);
     showPanel('practice');
     elements.practiceArea.classList.remove('hidden');
     elements.loading.classList.add('hidden');
 }
-function resolvePracticeSetType(practiceSet) {
-    if (practiceSet.paragraphs) {
-        return 'matching_headings';
+function fitbQuestionsOf(practiceSet) {
+    return (practiceSet.questions ?? []).filter((question) => question.question_type === 'FITB');
+}
+function tfngQuestionsOf(practiceSet) {
+    return (practiceSet.questions ?? []).filter((question) => question.question_type === 'TFNG');
+}
+function hasMatchingHeadings(practiceSet) {
+    return Array.isArray(practiceSet.paragraphs) && practiceSet.paragraphs.length > 0
+        && Array.isArray(practiceSet.headings) && practiceSet.headings.length > 0;
+}
+function renderImportNotice(practiceSet) {
+    if (practiceSet.source !== 'pdf') {
+        elements.importNotice.classList.add('hidden');
+        elements.importNotice.innerHTML = '';
+        return;
     }
-    return 'mixed_fitb_tfng';
+    const parts = [];
+    const title = practiceSet.title?.trim() || practiceSet.source_filename || 'Imported reading';
+    parts.push(`<h3>Imported from PDF: ${escapeHtml(title)}</h3>`);
+    if (practiceSet.source_filename && practiceSet.source_filename !== title) {
+        parts.push(`<p class="muted">${escapeHtml(practiceSet.source_filename)}</p>`);
+    }
+    if (practiceSet.answers_inferred) {
+        parts.push('<p class="warn">The PDF had no answer key, so the answers were worked out by the AI. Double-check any you disagree with.</p>');
+    }
+    const skipped = practiceSet.skipped_questions ?? [];
+    if (skipped.length > 0) {
+        const items = skipped.map((group) => `${group.numbers ? `Q${escapeHtml(group.numbers)} ` : ''}${escapeHtml(group.type)}`);
+        parts.push(`<p>Not imported (unsupported question types): ${items.join('; ')}.</p>`);
+    }
+    if (practiceSet.import_notes) {
+        parts.push(`<p class="muted">${escapeHtml(practiceSet.import_notes)}</p>`);
+    }
+    elements.importNotice.innerHTML = parts.join('');
+    elements.importNotice.classList.remove('hidden');
 }
 function renderShareUrl(shareUrl) {
     if (!shareUrl) {
@@ -433,8 +553,8 @@ function renderPassage(passage) {
     elements.passage.innerHTML = paragraphs.map((p) => `<p>${escapeHtml(p.trim())}</p>`).join('');
 }
 function renderMixedQuestions(practiceSet) {
-    const fitbQuestions = practiceSet.questions.filter((question) => question.question_type === 'FITB');
-    const tfngQuestions = practiceSet.questions.filter((question) => question.question_type === 'TFNG');
+    const fitbQuestions = fitbQuestionsOf(practiceSet);
+    const tfngQuestions = tfngQuestionsOf(practiceSet);
     for (const question of fitbQuestions) {
         elements.questions.appendChild(createFitbQuestionElement(question, fitbQuestions.length));
     }
@@ -443,14 +563,16 @@ function renderMixedQuestions(practiceSet) {
     }
 }
 function renderMatchingHeadings(practiceSet) {
+    const headings = practiceSet.headings ?? [];
+    const paragraphs = practiceSet.paragraphs ?? [];
     const headingsMarkup = [
         '<p><strong>Instructions:</strong> Match the headings below to the correct paragraphs in the passage.</p>',
         '<ul>',
-        ...practiceSet.headings.map((heading) => `<li><strong>${escapeHtml(heading.id)}.</strong> ${escapeHtml(heading.text)}</li>`),
+        ...headings.map((heading) => `<li><strong>${escapeHtml(heading.id)}.</strong> ${escapeHtml(heading.text)}</li>`),
         '</ul>',
     ].join('');
     elements.mhHeadingsList.innerHTML = headingsMarkup;
-    for (const paragraph of practiceSet.paragraphs) {
+    for (const paragraph of paragraphs) {
         const wrapper = document.createElement('div');
         wrapper.className = 'mh-paragraph-selection question-item';
         const label = document.createElement('label');
@@ -461,7 +583,7 @@ function renderMatchingHeadings(practiceSet) {
         select.dataset.paragraphId = paragraph.id;
         select.innerHTML = [
             '<option value="">Select a heading...</option>',
-            ...practiceSet.headings.map((heading) => `<option value="${escapeAttribute(heading.id)}">${escapeHtml(heading.id)}. ${escapeHtml(heading.text)}</option>`),
+            ...headings.map((heading) => `<option value="${escapeAttribute(heading.id)}">${escapeHtml(heading.id)}. ${escapeHtml(heading.text)}</option>`),
         ].join('');
         select.addEventListener('change', () => {
             select.classList.remove('correct', 'incorrect');
@@ -607,16 +729,18 @@ function updateScoreSummary(kind, totalQuestions) {
     }
 }
 function checkMatchingHeadingAnswers() {
-    if (!state.practiceSet || resolvePracticeSetType(state.practiceSet) !== 'matching_headings') {
+    const practiceSet = state.practiceSet;
+    if (!practiceSet || !hasMatchingHeadings(practiceSet)) {
         return;
     }
-    const practiceSet = state.practiceSet;
+    const answers = practiceSet.answers ?? {};
+    const paragraphs = practiceSet.paragraphs ?? [];
     const selects = Array.from(elements.mhQuestionArea.querySelectorAll('select[data-paragraph-id]'));
     let correctCount = 0;
     for (const select of selects) {
         const paragraphId = select.dataset.paragraphId;
         const selectedValue = select.value;
-        const correctValue = paragraphId ? practiceSet.answers[paragraphId] : undefined;
+        const correctValue = paragraphId ? answers[paragraphId] : undefined;
         select.classList.remove('correct', 'incorrect');
         if (!paragraphId || !selectedValue) {
             continue;
@@ -629,7 +753,7 @@ function checkMatchingHeadingAnswers() {
             select.classList.add('incorrect');
         }
     }
-    const total = practiceSet.paragraphs.length;
+    const total = paragraphs.length;
     elements.mhResults.textContent = `You matched ${correctCount} out of ${total} headings correctly.`;
     elements.mhResults.className = 'mh-results answer-result';
     void saveProgress('mh', `${correctCount}/${total}`);
@@ -879,7 +1003,7 @@ function renderHistoryList(items) {
           <polyline points="14 2 14 8 20 8"/>
         </svg>
         <p>No passages yet</p>
-        <span class="hint">Generate your first practice set to get started!</span>
+        <span class="hint">Generate or import your first practice set to get started!</span>
       </div>
     `;
         return;
@@ -895,15 +1019,18 @@ function renderHistoryList(items) {
         if (state.practiceId === item.id) {
             card.classList.add('active');
         }
+        const isPdf = item.source === 'pdf';
         const isMh = item.question_type === 'matching_headings';
-        const badgeClass = isMh ? 'mh' : 'mixed';
-        const badgeText = isMh ? 'Headings' : 'FITB + TFNG';
+        const badgeClass = isPdf ? 'pdf' : isMh ? 'mh' : 'mixed';
+        const badgeText = isPdf ? 'Imported PDF' : isMh ? 'Headings' : 'FITB + TFNG';
         const dateStr = item.created_at ? formatHistoryDate(item.created_at) : 'Unknown date';
+        const titleMarkup = isPdf && item.title ? `<div class="history-card-title">${escapeHtml(item.title)}</div>` : '';
         card.innerHTML = `
       <div class="history-card-meta">
         <span class="history-card-date">${escapeHtml(dateStr)}</span>
         <span class="history-card-badge ${badgeClass}">${badgeText}</span>
       </div>
+      ${titleMarkup}
       <div class="history-card-preview">${escapeHtml(item.passage_preview)}${item.passage_preview.length >= 200 ? '...' : ''}</div>
       <div class="history-card-footer">
         <span class="history-card-load">

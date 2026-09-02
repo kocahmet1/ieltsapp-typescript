@@ -1147,3 +1147,46 @@ footer {
 .passage.highlighter-active *::selection {
     background: rgba(251, 191, 36, 0.4);
 }
+
+/* PDF import */
+.import-notice {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #7c3aed;
+    border-radius: 8px;
+    padding: 0.9rem 1.1rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.95rem;
+    color: #334155;
+}
+
+.import-notice h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1.05rem;
+    color: #1e293b;
+}
+
+.import-notice p {
+    margin: 0.3rem 0;
+}
+
+.import-notice .warn {
+    color: #b45309;
+}
+
+.import-notice .muted {
+    color: #64748b;
+    font-size: 0.88rem;
+}
+
+.history-card-badge.pdf {
+    background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+    color: #f5f3ff;
+}
+
+.history-card-title {
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0.35rem 0 0.2rem;
+    font-size: 0.95rem;
+}

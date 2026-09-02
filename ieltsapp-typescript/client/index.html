@@ -85,6 +85,8 @@
             <option value="mixed_fitb_tfng">FITB + TFNG</option>
           </select>
         </label>
+        <button id="importPdfBtn" class="btn" type="button" title="Upload a PDF containing a reading passage and its questions">Import Reading (PDF)</button>
+        <input type="file" id="importPdfInput" accept="application/pdf,.pdf" class="hidden" />
         <button id="historyBtn" class="btn history-btn" type="button">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;">
             <circle cx="12" cy="12" r="10"/>
@@ -112,6 +114,7 @@
 
     <section class="practice-area hidden" id="practiceArea">
       <div id="shareUrlContainer"></div>
+      <div id="importNotice" class="import-notice hidden"></div>
       <div class="practice-container">
         <div class="passage-container">
           <div class="passage-header">
