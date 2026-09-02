@@ -20,9 +20,9 @@ loadEnvFile(envFile);
 const config = {
     port: Number(process.env.PORT || 5080),
     sessionSecret: process.env.SESSION_SECRET || 'development-session-secret',
-    geminiApiKey: process.env.GEMINI_API_KEY || '',
-    generationModel: process.env.GEMINI_GENERATION_MODEL || 'gemini-2.5-flash',
     openaiApiKey: process.env.OPENAI_API_KEY || '',
+    openaiBaseUrl: (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, ''),
+    openaiGenerationModel: process.env.OPENAI_GENERATION_MODEL || 'gpt-4o',
     openaiTranslationModel: process.env.OPENAI_TRANSLATION_MODEL || 'gpt-4o-mini',
 };
 ensureDirectory(dataRoot);
@@ -195,9 +195,9 @@ function handleGetProgress(req, res) {
 async function handleGenerate(req, res, requestUrl) {
     const body = await readJsonBody(req);
     const questionType = body.question_type === 'matching_headings' ? 'matching_headings' : 'mixed_fitb_tfng';
-    const apiKey = String(body.apiKey || '').trim() || config.geminiApiKey;
+    const apiKey = String(body.openaiApiKey || body.apiKey || '').trim() || config.openaiApiKey;
     if (!apiKey) {
-        return sendJson(res, 500, { error: 'No Gemini API key available' });
+        return sendJson(res, 500, { error: 'No OpenAI API key available. Please set one in API Key Settings.' });
     }
     const jobId = crypto.randomUUID();
     const jobStatus = {
@@ -300,22 +300,29 @@ async function handleTranslate(req, res) {
         sendJson(res, 500, { error: message });
     }
 }
-async function callOpenAiChat({ apiKey, model, systemPrompt, userMessage, temperature, maxTokens }) {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+async function callOpenAiChat({ apiKey, model, systemPrompt, userMessage, temperature, maxTokens, responseFormat }) {
+    const payload = {
+        model,
+        messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage },
+        ],
+        max_completion_tokens: maxTokens,
+    };
+    // Reasoning models (o-series, gpt-5 family) only accept the default temperature.
+    if (typeof temperature === 'number' && !/^(o\d|gpt-5)/i.test(model)) {
+        payload.temperature = temperature;
+    }
+    if (responseFormat) {
+        payload.response_format = responseFormat;
+    }
+    const response = await fetch(`${config.openaiBaseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({
-            model,
-            messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userMessage },
-            ],
-            temperature,
-            max_tokens: maxTokens,
-        }),
+        body: JSON.stringify(payload),
     });
     if (!response.ok) {
         const errorText = await response.text();
@@ -331,15 +338,14 @@ async function callOpenAiChat({ apiKey, model, systemPrompt, userMessage, temper
 async function generatePracticeJob({ jobId, apiKey, questionType, baseUrl }) {
     try {
         const prompt = questionType === 'matching_headings' ? matchingHeadingsPrompt() : mixedPrompt();
-        const text = await callGeminiText({
+        const text = await callOpenAiChat({
             apiKey,
-            model: config.generationModel,
-            prompt,
-            generationConfig: {
-                temperature: 0.7,
-                topP: 0.95,
-                topK: 40,
-            },
+            model: config.openaiGenerationModel,
+            systemPrompt: 'You are an expert IELTS Academic Reading test writer. Respond with a single valid JSON object and nothing else.',
+            userMessage: prompt,
+            temperature: 0.7,
+            maxTokens: 6000,
+            responseFormat: { type: 'json_object' },
         });
         const practiceSet = extractJsonObject(text);
         const practiceId = crypto.randomUUID();
@@ -359,12 +365,16 @@ async function generatePracticeJob({ jobId, apiKey, questionType, baseUrl }) {
     }
     catch (error) {
         console.error(error);
+        let message = error instanceof Error ? error.message : 'Generation failed';
+        if (message.includes('429')) {
+            message = 'API kota sınırına ulaşıldı. Lütfen birkaç saniye bekleyip tekrar deneyin.';
+        }
         saveJobStatus(jobId, {
             id: jobId,
             status: 'failed',
             created_at: new Date().toISOString(),
             practice_set_id: null,
-            error: error instanceof Error ? error.message : 'Generation failed',
+            error: message,
         });
     }
 }
@@ -407,29 +417,6 @@ Return a JSON object with:
 
 Use paragraph ids like A, B, C and heading ids like i, ii, iii.
 Return JSON only.`;
-}
-async function callGeminiText({ apiKey, model, prompt, generationConfig }) {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig,
-        }),
-    });
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Gemini request failed with ${response.status}: ${errorText}`);
-    }
-    const data = await response.json();
-    const parts = data.candidates?.[0]?.content?.parts || [];
-    const text = parts.map((part) => part.text || '').join('\n').trim();
-    if (!text) {
-        throw new Error('Gemini returned no text output.');
-    }
-    return text;
 }
 function extractJsonObject(text) {
     let candidate = text.trim();

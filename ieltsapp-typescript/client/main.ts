@@ -128,9 +128,6 @@ const elements = {
   loading: byId<HTMLElement>('loading'),
   apiKeyToggleBtn: byId<HTMLButtonElement>('apiKeyToggleBtn'),
   apiKeySection: byId<HTMLElement>('apiKeySection'),
-  apiKeyInput: byId<HTMLInputElement>('apiKeyInput'),
-  saveApiKeyBtn: byId<HTMLButtonElement>('saveApiKeyBtn'),
-  apiKeyStatus: byId<HTMLElement>('apiKeyStatus'),
   registerForm: byId<HTMLFormElement>('registerForm'),
   registerUsername: byId<HTMLInputElement>('registerUsername'),
   registerPassword: byId<HTMLInputElement>('registerPassword'),
@@ -172,7 +169,7 @@ initialize().catch((error) => {
 
 async function initialize(): Promise<void> {
   bindEvents();
-  loadSavedApiKey();
+  window.localStorage.removeItem('geminiApiKey'); // legacy key from before the switch to OpenAI
   loadSavedOpenaiKey();
   updateAuthUi({ isLoggedIn: false });
 
@@ -189,7 +186,6 @@ function bindEvents(): void {
     void generatePracticeSet();
   });
   elements.apiKeyToggleBtn.addEventListener('click', toggleApiKeySection);
-  elements.saveApiKeyBtn.addEventListener('click', saveApiKey);
   elements.saveOpenaiKeyBtn.addEventListener('click', saveOpenaiKey);
   elements.closeTranslation.addEventListener('click', hideTranslationModal);
   elements.passage.addEventListener('mouseup', (event) => {
@@ -359,43 +355,10 @@ function toggleApiKeySection(): void {
   elements.apiKeySection.classList.toggle('hidden');
 }
 
-function loadSavedApiKey(): void {
-  const apiKey = window.localStorage.getItem('geminiApiKey');
-  if (apiKey) {
-    elements.apiKeyStatus.textContent = 'Custom API key is set and will be sent with requests.';
-    elements.apiKeyStatus.className = 'api-key-status success';
-  } else {
-    elements.apiKeyStatus.textContent = 'No custom API key saved. The server will use its default key if configured.';
-    elements.apiKeyStatus.className = 'api-key-status';
-  }
-}
-
-function saveApiKey(): void {
-  const apiKey = elements.apiKeyInput.value.trim();
-  if (!apiKey) {
-    window.localStorage.removeItem('geminiApiKey');
-    elements.apiKeyStatus.textContent = 'Saved API key removed.';
-    elements.apiKeyStatus.className = 'api-key-status';
-    elements.apiKeyInput.value = '';
-    return;
-  }
-
-  if (apiKey.length < 20) {
-    elements.apiKeyStatus.textContent = 'That key looks too short to be valid.';
-    elements.apiKeyStatus.className = 'api-key-status error';
-    return;
-  }
-
-  window.localStorage.setItem('geminiApiKey', apiKey);
-  elements.apiKeyInput.value = '';
-  elements.apiKeyStatus.textContent = 'Custom API key saved.';
-  elements.apiKeyStatus.className = 'api-key-status success';
-}
-
 function loadSavedOpenaiKey(): void {
   const apiKey = window.localStorage.getItem('openaiApiKey');
   if (apiKey) {
-    elements.openaiKeyStatus.textContent = 'OpenAI API key is set and will be used for translations.';
+    elements.openaiKeyStatus.textContent = 'OpenAI API key is set and will be used for generation and translations.';
     elements.openaiKeyStatus.className = 'api-key-status success';
   } else {
     elements.openaiKeyStatus.textContent = 'No OpenAI API key saved. The server will use its default key if configured.';
@@ -446,7 +409,7 @@ async function generatePracticeSet(): Promise<void> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        apiKey: window.localStorage.getItem('geminiApiKey') ?? '',
+        openaiApiKey: window.localStorage.getItem('openaiApiKey') ?? '',
         question_type: currentGeneratorMode(),
       }),
       credentials: 'same-origin',

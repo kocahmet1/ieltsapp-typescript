@@ -7,13 +7,14 @@ This folder contains a TypeScript rewrite of the original Flask + vanilla JS IEL
 - TypeScript client in `client/main.ts`
 - TypeScript Node server in `server/server.ts`
 - File-based persistence in `data/`
-- Gemini REST API integration for generation and translation
+- OpenAI Chat Completions API integration for generation and translation
 
 ## Run
 
 1. Copy `.env.example` to `.env`
-2. Set `GEMINI_API_KEY`
-3. Build:
+2. Set `OPENAI_API_KEY` (optional: `OPENAI_GENERATION_MODEL`, default `gpt-4o`)
+3. Install dependencies and build:
+   - `npm.cmd install`
    - `npm.cmd run build`
 4. Start:
    - `npm.cmd start`
